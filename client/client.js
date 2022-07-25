@@ -53,6 +53,7 @@ require([
     "models/auth",
     "models/user-details",
     "services/recordings",
+    "services/observing",
     "views/view-activation-helpers",
     "views/auth-view",
     "views/chat-view",
@@ -77,7 +78,7 @@ require([
     "views/users-page-selected-user-view",
     "views/users-page-scores-view"
 ], function( $, _, Backbone, BackbonePaginator, Backgrid, BackgridPaginator, dispatcher, debugMode, socket, router, pageRouter,
-     HighScoresModel, ChatModel, SiteNewsModel, CauseStatsModel, LevelStatsModel, GeneralStatsModel, LevelProbabilityModel, DPadButtonModel, AuthenticationModel, UserDetailsCollection, recordings,
+     HighScoresModel, ChatModel, SiteNewsModel, CauseStatsModel, LevelStatsModel, GeneralStatsModel, LevelProbabilityModel, DPadButtonModel, AuthenticationModel, UserDetailsCollection, recordings, observing,
      activate, AuthView, ChatView, ConsoleChatView, PlayView, HeaderView, CurrentGamesView, HighScoresView, AllScoresView, SiteNewsView,
      ConsoleView, SeedPopupView, StatisticsView, LevelStatsView, GeneralStatsView, CauseStatsView, LevelProbabilityView,
      DPadButtonView, DPadButtonVisibilityView, UsersPageView, UsersPageSelectView, UserPageSelectedUserView, UsersPageScoresView){
@@ -215,6 +216,7 @@ require([
     dispatcher.on("startGame", headerView.startGame, headerView);
     dispatcher.on("startGame", consoleView.initialiseForNewGame, consoleView);
 
+    dispatcher.on("observeGame", observing.startObserving, observing);
     dispatcher.on("observeGame", headerView.observeGame, headerView);
     dispatcher.on("observeGame", consoleView.initialiseForNewGame, consoleView);
 

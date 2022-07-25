@@ -14,7 +14,8 @@ define([
         tagName: "tr",
         className: "games-row",
         events : {
-            "click #observe-game" : "observeGame"
+            "click #observe-game" : "observeGame",
+            "click #link-game" : "linkGame"
         },
         
         template : _.template($('#current-games-row').html()),
@@ -22,9 +23,20 @@ define([
         observeGame: function(event){
             event.preventDefault();
 
-            send("brogue", "observe", {username: this.model.get("userName"), variant: this.model.get("variant")});
             dispatcher.trigger("observeGame", {username: this.model.get("userName"), variant: this.model.get("variant")});
             this.goToConsole();
+        },
+
+        linkGame: function(event){
+            event.preventDefault();
+
+            var pathDir = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1)
+            var gameLink = window.location.host + pathDir + "#observeGame/" + this.model.get("userName") + "-" + this.model.get("variant");
+            var $temp = $("<input>");
+            $("body").append($temp);
+            $temp.val(gameLink).select();
+            document.execCommand("copy");
+            $temp.remove();
         },
 
         render: function() {

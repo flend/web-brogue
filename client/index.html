@@ -241,6 +241,18 @@
       <li><%= date %><ul><li><%= description %></li></ul>
     </script>
 
+<script id="current-games-row" type="text/template">
+    <td><%= userName %></td>
+    <td><%= seed %></td>
+    <td><%= prettyVariant %></td>
+    <td><% if (easyMode) { %>&<% } %><%= deepestLevel %></td>
+    <td><%= prettyScore %></td>
+    <td><%= formattedIdle %></td>
+    <td><a id="observe-game" data-username="<%= userName %>" href="#brogue"><%= action %></a></td>
+    <td><a id="link-game" href="#brogue"><%= linkAction %></a></td>
+</script>
+
+
     <script id="current-games-heading" type="text/template">
       <h2>Current Games</h2>
       <% if (isEmpty) { %>

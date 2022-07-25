@@ -12,7 +12,8 @@ define([
             "currentGames":      "currentGames",
             "gameStatistics":    "gameStatistics",
             "userStatistics":    "userStatistics",
-            "viewRecording/:variant-:id(/:turn)": "viewRecording"
+            "viewRecording/:variant-:id(/:turn)": "viewRecording",
+            "observeGame/:username-:variant": "observeGame"
         },
 
         started: false,
@@ -36,6 +37,11 @@ define([
                 recordingId = recordingId.concat("-" + turn);
             }
             dispatcher.trigger("recordingGame", {variant: variant, id: recordingId});
+            dispatcher.trigger("showConsole");
+        },
+        observeGame: function(username, variant) {
+
+            dispatcher.trigger("observeGame", {username: username, variant: variant});
             dispatcher.trigger("showConsole");
         },
         //Only activate the router on login, to avoid races when viewing recordings etc.

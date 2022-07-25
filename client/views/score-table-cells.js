@@ -60,7 +60,8 @@ define([
         copyLink: function(event) {
             event.preventDefault();
             while (event.target && !$(event.target).attr("href")) event.target = event.target.parentElement;
-            var gameLink = window.location.host + "/" + $(event.target).attr("href");
+            var pathDir = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1)
+            var gameLink = window.location.host + pathDir + $(event.target).attr("href");
             var $temp = $("<input>");
             $("body").append($temp);
             $temp.val(gameLink).select();
