@@ -216,6 +216,7 @@ th, td {
 .lobby-chat,
 .current-games,
 .mini-scores,
+.last-wins-scores,
 .site-news,
 .all-scores,
 .users-page,
@@ -299,6 +300,7 @@ th, td {
 #current-games-table,
 #all-scores-grid,
 #mini-scores-grid,
+#last-wins-scores-grid,
 #user-stats-scores-grid {
     display: block;
     overflow-x: auto;
