@@ -15,12 +15,12 @@ define([
         currentGames : function(){
             router.navigate("currentGames");
             $('#all-scores, #users-page, #server-statistics').addClass('inactive');
-            $('#current-games, #mini-scores, #chat, #site-news').removeClass('inactive');
+            $('#current-games, #mini-scores, #last-wins-scores, #chat, #site-news').removeClass('inactive');
         },
 
         statistics : function(){
             router.navigate("gameStatistics");
-            $('#current-games, #mini-scores, #all-scores, #site-news, #users-page').addClass('inactive');
+            $('#current-games, #mini-scores, #last-wins-scores, #all-scores, #site-news, #users-page').addClass('inactive');
             $('#server-statistics').removeClass('inactive');
         },
 
@@ -32,7 +32,7 @@ define([
 
         usersPage : function() {
             router.navigate("userStatistics");
-            $('#current-games, #mini-scores, #server-statistics, #site-news, #all-scores').addClass('inactive');
+            $('#current-games, #mini-scores, #last-wins-scores, #server-statistics, #site-news, #all-scores').addClass('inactive');
             $('#users-page').removeClass('inactive');
         },
         
@@ -54,7 +54,7 @@ define([
         
         resetAll: function(){
             $('#all-scores, #console-holder, #server-statistics, #users-page').addClass("inactive");
-            $('#lobby, #auth, #current-games, #mini-scores').removeClass("inactive");
+            $('#lobby, #auth, #current-games, #mini-scores, #last-wins-scores').removeClass("inactive");
         }
     };
     
