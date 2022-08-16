@@ -50,7 +50,9 @@ module.exports = function(app, config) {
             }
             else {
                 // No 64-bit seed for old game records, use 32-bit part
-                filteredRecord.seed = gameRecord.seed.toString();
+                if (gameRecord.seed) {
+                    filteredRecord.seed = gameRecord.seed.toString();
+                }
             }
 
             // Seeded may not be set for earlier records in the database
@@ -128,24 +130,16 @@ module.exports = function(app, config) {
         });
     });
 
-    app.get("/api/lastwins", function (req, res, next) {
+    app.get("/api/games/lastwins", function (req, res, next) {
 
         var aggregateQuery = 
             [ { 
-                $project: {
-                    items: {
-                        $filter: {
-                            input: "$items",
-                            as: "item",
-                            cond: { $ne: [ "$$item.easyMode", true ] }
-                        }
-                    }
-                }
-             },
-             {
-                $group : { _id: '$variant',
+                $match: { easyMode: { $ne: true } } 
+              },
+              {
+              $group : { _id: '$variant',
                         max: { $max : "$date" } }
-             }];
+              }];
             
         res.format({
             json: function () {

@@ -335,6 +335,8 @@ describe("api/games/lastwins", function(){
             .set('Accept', 'application/json')
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
+                console.log(JSON.stringify(resText.data, null, '\t'))
+
                 var gameData = resText.data;
                 assert.lengthOf(gameData, 2);
                 //Most recent BROGUE is a SUPERVICTORY (but DEATH not included)
@@ -969,7 +971,6 @@ describe("api/games filtering by result", function(){
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
                 var gameData = resText.data;
-                console.log(JSON.stringify(resText.data, null, '\t'))
                 expect(gameData).to.have.length.of(2);
                 expect(gameData[0]).to.have.deep.property('seed', '5');
                 expect(gameData[1]).to.have.deep.property('seed', '2');
