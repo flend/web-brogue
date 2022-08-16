@@ -200,6 +200,151 @@ describe("api/games", function(){
     });
 });
 
+describe("api/games/lastwins", function(){
+
+    beforeEach(function(done) {
+
+        var gameRecord1 = {
+            username: "aaa",
+            date: new Date("2013-05-29T07:56:00.123Z"),
+            score: 100,
+            seed: 201,
+            level: 3,
+            result: brogueConstants.notifyEvents.GAMEOVER_DEATH,
+            easyMode: false,
+            description: "Killed by a pink jelly on depth 3.",
+            recording: "file1",
+            variant: "BROGUE",
+            seeded: true
+        };
+
+        var gameRecord2 = {
+            username: "bbb",
+            date: new Date("2011-05-26T09:56:00.123Z"),
+            score: 1003,
+            seed: 202,
+            level: 5,
+            result: brogueConstants.notifyEvents.GAMEOVER_VICTORY,
+            easyMode: false,
+            description: "Escaped.",
+            recording: "file2",
+            variant: "GBROGUE"
+        };
+
+        var gameRecord3 = {
+            username: "ddd",
+            date: new Date("2011-05-26T08:56:00.123Z"),
+            score: 1003,
+            seed: 203,
+            level: 5,
+            result: brogueConstants.notifyEvents.GAMEOVER_SUPERVICTORY,
+            easyMode: false,
+            description: "Escaped.",
+            recording: "file2",
+            variant: "GBROGUE"
+        };
+
+        var gameRecord4 = {
+            username: "eee",
+            date: new Date("2013-05-27T08:56:00.123Z"),
+            score: 1003,
+            seed: 204,
+            level: 20,
+            result: brogueConstants.notifyEvents.GAMEOVER_VICTORY,
+            easyMode: false,
+            description: "Escaped.",
+            recording: "file2",
+            variant: "BROGUE"
+        };
+
+        var gameRecord5 = {
+            username: "fff",
+            date: new Date("2012-05-27T08:56:00.123Z"),
+            score: 1003,
+            seed: 205,
+            level: 20,
+            result: brogueConstants.notifyEvents.GAMEOVER_QUIT,
+            easyMode: false,
+            description: "Quit.",
+            recording: "file2",
+            variant: "BROGUEPLUS"
+        };
+
+        var gameRecord6 = {
+            username: "ggg",
+            date: new Date("2013-05-28T08:56:00.123Z"),
+            score: 1003,
+            seed: 206,
+            level: 20,
+            result: brogueConstants.notifyEvents.GAMEOVER_SUPERVICTORY,
+            easyMode: false,
+            description: "Win.",
+            recording: "file2",
+            variant: "BROGUE"
+        };
+
+        var gameRecord7 = {
+            username: "hhh",
+            date: new Date("2011-05-26T10:56:00.123Z"),
+            score: 1003,
+            seed: 207,
+            level: 5,
+            result: brogueConstants.notifyEvents.GAMEOVER_QUIT,
+            easyMode: false,
+            description: "Escaped.",
+            recording: "file2",
+            variant: "GBROGUE"
+        };
+
+        var gameRecord8 = {
+            username: "hhh",
+            date: new Date("2011-05-26T11:56:00.123Z"),
+            score: 1003,
+            seed: 207,
+            level: 5,
+            result: brogueConstants.notifyEvents.GAMEOVER_VICTORY,
+            easyMode: true,
+            description: "Escaped.",
+            recording: "file2",
+            variant: "GBROGUE"
+        };
+
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5, gameRecord6, gameRecord7, gameRecord8], function() {
+            done();
+        });
+    });
+
+    afterEach(function(done) {
+
+        gameRecord.remove({}, function() {
+            done();
+        });
+    });
+
+    it("returns status 200", function(done) {
+        request(server)
+            .get("/api/games/lastwins")
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(200, done)
+    });
+
+    it("returns most recent wins for each variant, sorted by variant", function(done) {
+        request(server)
+            .get("/api/games/lastwins")
+            .set('Accept', 'application/json')
+            .end(function(err, res) {
+                var resText = JSON.parse(res.text);
+                var gameData = resText.data;
+                assert.lengthOf(gameData, 2);
+                //Most recent BROGUE is a SUPERVICTORY (but DEATH not included)
+                expect(gameData[0]).to.have.property('seed', '206');
+                //Most recent GBROGUE is a VICTORY (but QUIT not included)
+                expect(gameData[1]).to.have.property('seed', '202');
+                done();
+        });
+    });
+});
 
 describe("api/games filtering by variant", function(){
 

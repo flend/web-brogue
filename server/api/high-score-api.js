@@ -128,6 +128,41 @@ module.exports = function(app, config) {
         });
     });
 
+    app.get("/api/lastwins", function (req, res, next) {
+
+        var aggregateQuery = 
+            [ { 
+                $project: {
+                    items: {
+                        $filter: {
+                            input: "$items",
+                            as: "item",
+                            cond: { $ne: [ "$$item.easyMode", true ] }
+                        }
+                    }
+                }
+             },
+             {
+                $group : { _id: '$variant',
+                        max: { $max : "$date" } }
+             }];
+            
+        res.format({
+            json: function () {
+
+                GameRecord.aggregate(aggregateQuery).exec(function (err, games) {
+
+                    if (err) return next(err);
+
+                    console.log(JSON.stringify(games, null, '\t'))
+
+                    var gameRecordsFiltered = filterGameRecords(games);
+                    res.json(gameRecordsFiltered);
+                });
+            }
+        });
+    });
+
     app.get("/api/dailygames", function (req, res, next) {
 
         var now = new Date();
