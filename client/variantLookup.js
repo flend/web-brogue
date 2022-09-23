@@ -101,6 +101,15 @@ define([
                 tiles: true,
                 disabled: true
             },
+            "KBROGUE223": {
+                code: "KBROGUE223",
+                display: "kBrogue v2.2.3",
+                consoleColumns: 100,
+                consoleRows: 34,
+                remapGlyphs: true,
+                tiles: true,
+                highlight: true
+            },
             "GBROGUEV1180211": {
                 code: "GBROGUEV1180211",
                 display: "gBrogue v1.18.02.11",

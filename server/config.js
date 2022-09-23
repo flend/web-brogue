@@ -120,6 +120,14 @@ var config = {
             supportsDownloads: true, //Replays should work with desktop version
             maxSeed: Integer.MAX_VALUE
         },
+        "KBROGUEV223": {
+            binaryPath: "binaries/kbrogue-v223",
+            version: "2.2.3",
+            versionGroup: "2.2.x",
+            modernCmdLine: true,    //Uses v1.8.x+ standard command line
+            supportsDownloads: true, //Replays should work with desktop version
+            maxSeed: Integer.MAX_VALUE
+        },
     },
     defaultBrogueVariant: "BROGUECEV18",
     path : {
