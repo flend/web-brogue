@@ -334,15 +334,15 @@ describe("api/games/lastwins", function(){
             .get("/api/games/lastwins")
             .set('Accept', 'application/json')
             .end(function(err, res) {
-                var resText = JSON.parse(res.text);
-                console.log(JSON.stringify(resText.data, null, '\t'))
+                var gameData = JSON.parse(res.text);
 
-                var gameData = resText.data;
                 assert.lengthOf(gameData, 2);
                 //Most recent BROGUE is a SUPERVICTORY (but DEATH not included)
-                expect(gameData[0]).to.have.property('seed', '206');
-                //Most recent GBROGUE is a VICTORY (but QUIT not included)
-                expect(gameData[1]).to.have.property('seed', '202');
+                const brogueRecord = gameData.find(record => record.variant === 'BROGUE');
+                expect(brogueRecord).to.have.property('seed', '206');
+                //Most recent GBROGUE is a VICTORY (but QUIT and EASYMODE not included)
+                const gbrogueRecord = gameData.find(record => record.variant === 'GBROGUE');
+                expect(gbrogueRecord).to.have.property('seed', '202');
                 done();
         });
     });

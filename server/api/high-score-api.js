@@ -5,6 +5,7 @@ var sanitize = require('mongo-sanitize');
 var _ = require("underscore");
 var stats = require('../stats/stats.js');
 var Integer = require('integer');
+const brogueConstants = require('../brogue/brogue-constants');
 
 module.exports = function(app, config) {
 
@@ -134,11 +135,24 @@ module.exports = function(app, config) {
 
         var aggregateQuery = 
             [ { 
-                $match: { easyMode: { $ne: true } } 
+                $match: { easyMode: { $ne: true },
+                          result: { $in: [brogueConstants.notifyEvents.GAMEOVER_SUPERVICTORY, brogueConstants.notifyEvents.GAMEOVER_VICTORY] } } 
+              },
+              {
+                $sort: { date: -1 }
               },
               {
               $group : { _id: '$variant',
-                        max: { $max : "$date" } }
+                        recordId: { $first: "$_id" },
+                        maxDate: { $first : "$date" } }
+              },
+              {
+                $lookup: {
+                  from: "gamerecords",
+                  localField: "recordId",
+                  foreignField: "_id",
+                  as: "record"
+                }
               }];
             
         res.format({
@@ -148,9 +162,9 @@ module.exports = function(app, config) {
 
                     if (err) return next(err);
 
-                    console.log(JSON.stringify(games, null, '\t'))
+                    const gameRecordList = games.reduce((result, { record }) => result.concat(record), []);
+                    var gameRecordsFiltered = filterGameRecords(gameRecordList);
 
-                    var gameRecordsFiltered = filterGameRecords(games);
                     res.json(gameRecordsFiltered);
                 });
             }
