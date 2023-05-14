@@ -83,7 +83,7 @@ define([
 
         render: function() {
 
-            this.$el.html(this.headingTemplate({ username: this.model.username }));
+            this.$el.html(this.headingTemplate());
 
             $("#last-wins-scores-grid").append(this.grid.render().$el);
 

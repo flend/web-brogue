@@ -174,7 +174,7 @@ require([
 
     dispatcher.on("login", headerView.login, headerView);
     dispatcher.on("login", highScoresView.login, highScoresView);
-    dispatcher.on("login", allScoresView.login, allScoresView);
+    dispatcher.on("login", lastWinsScoresView.login, lastWinsScoresView);
     dispatcher.on("login", chatView.login, chatView);
     dispatcher.on("login", consoleChatView.login, consoleChatView);
     dispatcher.on("login", playView.login, playView);

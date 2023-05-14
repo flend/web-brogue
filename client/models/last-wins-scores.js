@@ -7,17 +7,18 @@ define([
     'services/scores-api-parser',
 ], function($, _, Backbone, ScoresParser) {
 
-    var LastWinsScores = Backbone.PageableCollection.extend({
-        url: '/api/games?result=2&limit=1&sort=date&order=desc',
+    var LastWinsScores = Backbone.Collection.extend({
+        url: '/api/games/lastwins',
 
-        parseState: function (resp, queryParams, state, options) {
-            return ScoresParser.stateFromResp(resp);
-        },
+        parse: function (resp) {
+            _.each(resp, function(element, index, list) {
+                element.prettyDate = ScoresParser.formatDate(element.date);
+                element.prettyVariant = ScoresParser.lookupVariant(element.variant);
+                element.prettySeeded = ScoresParser.formatSeeded(element.seeded);
+            });
 
-         // get the actual records
-        parseRecords: function (resp, options) {
-            return ScoresParser.recordsFromResp(resp);
-        },
+            return resp;
+        }
 
     });
 
