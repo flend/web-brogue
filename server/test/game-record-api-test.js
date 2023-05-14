@@ -367,7 +367,7 @@ describe("api/games/lastwins", function(){
         request(server)
             .get("/api/games/lastwins")
             .set('Accept', 'application/json')
-            .query({ variant: ['GBROGUE', 'RAPIDBROGUE'] })
+            .query({ variant: "GBROGUE,RAPIDBROGUE" })
             .end(function(err, res) {
                 var gameData = JSON.parse(res.text);
 

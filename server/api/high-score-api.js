@@ -133,9 +133,12 @@ module.exports = function(app, config) {
 
     app.get("/api/games/lastwins", function (req, res, next) {
 
-        const filterVariants = req.query.variant ? sanitize(req.query.variant) : null;
-
-        console.log("variant :" + JSON.stringify(filterVariants))
+        var filterVariants = null;
+        if (req.query.variant) {
+            const sanitizedQuery = sanitize(req.query.variant);
+            const splitVariants = sanitizedQuery.split(',');
+            filterVariants = splitVariants.map(item => item.trim());
+        }
  
         var aggregateQuery = 
             [ 
