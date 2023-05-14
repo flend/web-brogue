@@ -309,7 +309,20 @@ describe("api/games/lastwins", function(){
             variant: "GBROGUE"
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5, gameRecord6, gameRecord7, gameRecord8], function() {
+        var gameRecord9 = {
+            username: "hhh",
+            date: new Date("2014-05-26T11:56:00.123Z"),
+            score: 1003,
+            seed: 208,
+            level: 5,
+            result: brogueConstants.notifyEvents.GAMEOVER_VICTORY,
+            easyMode: false,
+            description: "Escaped.",
+            recording: "file2",
+            variant: "RAPIDBROGUE"
+        };
+
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5, gameRecord6, gameRecord7, gameRecord8, gameRecord9], function() {
             done();
         });
     });
@@ -336,13 +349,33 @@ describe("api/games/lastwins", function(){
             .end(function(err, res) {
                 var gameData = JSON.parse(res.text);
 
-                assert.lengthOf(gameData, 2);
+                assert.lengthOf(gameData, 3);
                 //Most recent BROGUE is a SUPERVICTORY (but DEATH not included)
                 const brogueRecord = gameData.find(record => record.variant === 'BROGUE');
                 expect(brogueRecord).to.have.property('seed', '206');
                 //Most recent GBROGUE is a VICTORY (but QUIT and EASYMODE not included)
                 const gbrogueRecord = gameData.find(record => record.variant === 'GBROGUE');
                 expect(gbrogueRecord).to.have.property('seed', '202');
+                //Most recent RAPIDBROGUE is a VICTORY
+                const rapidbrogueRecord = gameData.find(record => record.variant === 'RAPIDBROGUE');
+                expect(rapidbrogueRecord).to.have.property('seed', '208');
+                done();
+        });
+    });
+
+    it("returns most recent wins for each variant, filtered and sorted by variant", function(done) {
+        request(server)
+            .get("/api/games/lastwins")
+            .set('Accept', 'application/json')
+            .query({ variant: ['GBROGUE', 'RAPIDBROGUE'] })
+            .end(function(err, res) {
+                var gameData = JSON.parse(res.text);
+
+                assert.lengthOf(gameData, 2);
+                const gbrogueRecord = gameData.find(record => record.variant === 'GBROGUE');
+                expect(gbrogueRecord).to.have.property('seed', '202');
+                const rapidbrogueRecord = gameData.find(record => record.variant === 'RAPIDBROGUE');
+                expect(rapidbrogueRecord).to.have.property('seed', '208');
                 done();
         });
     });

@@ -133,9 +133,15 @@ module.exports = function(app, config) {
 
     app.get("/api/games/lastwins", function (req, res, next) {
 
+        const filterVariants = req.query.variant ? sanitize(req.query.variant) : null;
+
+        console.log("variant :" + JSON.stringify(filterVariants))
+ 
         var aggregateQuery = 
-            [ { 
-                $match: { easyMode: { $ne: true },
+            [ 
+              { 
+              $match: { easyMode: { $ne: true },
+                          variant: [],
                           result: { $in: [brogueConstants.notifyEvents.GAMEOVER_SUPERVICTORY, brogueConstants.notifyEvents.GAMEOVER_VICTORY] } } 
               },
               {
@@ -152,9 +158,20 @@ module.exports = function(app, config) {
                   localField: "recordId",
                   foreignField: "_id",
                   as: "record"
-                }
-              }];
-            
+                },
+              },
+              {
+                $sort: { variant: 1 }
+              }
+            ];
+
+        if (filterVariants) {
+            aggregateQuery[0].$match.variant = { $in: filterVariants };
+        }
+        else {
+            delete aggregateQuery[0].$match.variant;
+        }
+        
         res.format({
             json: function () {
 
