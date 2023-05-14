@@ -5,7 +5,8 @@ define([
     'underscore',
     'backbone',
     'services/scores-api-parser',
-], function($, _, Backbone, ScoresParser) {
+    'variantLookup'
+], function($, _, Backbone, ScoresParser, VariantLookup) {
 
     var LastWinsScores = Backbone.Collection.extend({
         url: '/api/games/lastwins',
@@ -18,6 +19,17 @@ define([
             });
 
             return resp;
+        },
+
+        initialize: function() {
+            this.setUrlFromConfig();
+        },
+
+        setUrlFromConfig: function () {
+            const variantsToRetrieve = Object.values(VariantLookup.variants).filter(variant => !variant.disabled)
+                                                                            .map(variant => variant.code);
+            const variantApiString = variantsToRetrieve.join(',');
+            this.url = `/api/games/lastwins?variant=${variantApiString}`;
         }
 
     });
