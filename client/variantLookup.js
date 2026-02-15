@@ -7,6 +7,15 @@ define([
     //Includes all historical variants, so the API response can be prettified
     var VariantLookup = {
         variants: {
+            "BROGUECEV151": {
+                code: "BROGUECEV151",
+                display: "BrogueCE 1.15.1",
+                consoleColumns: 100,
+                consoleRows: 34,
+                remapGlyphs: true,
+                tiles: true,
+                default: true
+            },
             "BROGUECEV140": {
                 code: "BROGUECEV140",
                 display: "BrogueCE 1.14",
@@ -14,7 +23,7 @@ define([
                 consoleRows: 34,
                 remapGlyphs: true,
                 tiles: true,
-                default: true
+                default: false
             },
             "BROGUECEV130": {
                 code: "BROGUECEV130",
@@ -90,6 +99,15 @@ define([
                 consoleRows: 34,
                 disabled: true
             },
+            "BULLETBROGUEV121": {
+                code: "BULLETBROGUEV121",
+                display: "Bullet Brogue v1.2.1",
+                consoleColumns: 100,
+                consoleRows: 34,
+                remapGlyphs: true,
+                tiles: true,
+                highlight: true
+            },
             "BULLETBROGUEV110": {
                 code: "BULLETBROGUEV110",
                 display: "Bullet Brogue v1.1",
@@ -97,7 +115,7 @@ define([
                 consoleRows: 34,
                 remapGlyphs: true,
                 tiles: true,
-                highlight: true
+                highlight: false
             },
             "BULLETBROGUEV100": {
                 code: "BULLETBROGUEV100",
@@ -108,6 +126,15 @@ define([
                 tiles: true,
                 disabled: true
             },
+            "RAPIDBROGUEV171": {
+                code: "RAPIDBROGUEV171",
+                display: "Rapid Brogue v1.7.1",
+                consoleColumns: 100,
+                consoleRows: 34,
+                remapGlyphs: true,
+                tiles: true,
+                highlight: true
+            },
             "RAPIDBROGUEV160": {
                 code: "RAPIDBROGUEV160",
                 display: "Rapid Brogue v1.6.0",
@@ -115,7 +142,7 @@ define([
                 consoleRows: 34,
                 remapGlyphs: true,
                 tiles: true,
-                highlight: true
+                highlight: false
             },
             "RAPIDBROGUEV150": {
                 code: "RAPIDBROGUEV150",

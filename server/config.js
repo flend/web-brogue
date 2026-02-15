@@ -16,6 +16,14 @@ var config = {
             supportsDownloads: true, //Replays should work with desktop version
             maxSeed: Integer(4294967295)
         },
+        "BROGUECEV151": {
+            binaryPath: "binaries/brogue-ce151",
+            version: "1.15.1",
+            versionGroup: "1.15.x",
+            modernCmdLine: true,    //Uses v1.8.x+ standard command line
+            supportsDownloads: true, //Replays should work with desktop version
+            maxSeed: Integer.MAX_VALUE
+        },
         "BROGUECEV140": {
             binaryPath: "binaries/brogue-ce140",
             version: "1.14",
@@ -170,6 +178,15 @@ var config = {
             supportsDownloads: true, //Replays should work with desktop version
             maxSeed: Integer.MAX_VALUE
         },
+        "RAPIDBROGUEV171": {
+            binaryPath: "binaries/brogue-ce151",
+            version: "1.7.1",
+            versionGroup: "1.7.x",
+            modernCmdLine: true,    //Uses v1.8.x+ standard command line
+            customCmdLine: ["--variant", "rapid_brogue"],
+            supportsDownloads: true, //Replays should work with desktop version
+            maxSeed: Integer.MAX_VALUE
+        },
         "BULLETBROGUEV100": {
             binaryPath: "binaries/bullet-brogue-v100",
             version: "1.0.0",
@@ -182,6 +199,15 @@ var config = {
             binaryPath: "binaries/bullet-brogue-v110",
             version: "1.1.0",
             versionGroup: "1.1.x",
+            modernCmdLine: true,    //Uses v1.8.x+ standard command line
+            customCmdLine: ["--variant", "bullet_brogue"],
+            supportsDownloads: true, //Replays should work with desktop version
+            maxSeed: Integer.MAX_VALUE
+        },
+        "BULLETBROGUEV121": {
+            binaryPath: "binaries/brogue-ce151",
+            version: "1.2.1",
+            versionGroup: "1.2.x",
             modernCmdLine: true,    //Uses v1.8.x+ standard command line
             customCmdLine: ["--variant", "bullet_brogue"],
             supportsDownloads: true, //Replays should work with desktop version
