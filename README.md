@@ -96,6 +96,9 @@ Its database name must end in `_test`; tests delete their fixtures.
 
 Database migration
 ----------------------------
-See [the migration notes](doc/database-migration.md). The legacy dump's format and
-source MongoDB version must be established before choosing and rehearsing the
-import procedure. The code upgrade does not migrate a production database.
+The tested MongoDB 3.6 export path uses per-collection legacy Extended JSON.
+From `server`, set `MIGRATION_MONGODB_URI` to a new empty database and run
+`npm run migrate:json -- /path/to/json-export --check-only`, then repeat without
+`--check-only` to import and validate it. Current MongoDB Database Tools must be
+installed. See [the migration instructions](doc/database-migration.md) for setup,
+reports, and final cutover. The script never overwrites an existing database.
