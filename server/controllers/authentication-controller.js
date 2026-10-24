@@ -1,15 +1,24 @@
 var config = require('../config');
 var _ = require('underscore');
-var fs = require('fs');
 var Controller = require('./controller-base');
 var User = require('../user/user-model');
-var cleanUp = require("./cleanup-controllers.js");
 var sessions = require('client-sessions');
-var brogueConstants = require('../brogue/brogue-constants');
+var isRegistrationName = require('../security/username').isRegistrationName;
+var AuthLimiter = require('../security/auth-limiter');
+var clientAddress = require('../security/client-address');
+
+const isObject = value => value && typeof value === 'object' && !Array.isArray(value);
+const isPassword = value => typeof value === 'string' && value.length > 0 && Buffer.byteLength(value) <= 4096;
 
 // Controller for handling user authentication over the web socket
 
-function AuthController(socket) {
+function AuthController(socket, options = {}) {
+    this.config = options.config || config;
+    this.authLimiter = options.authLimiter || new AuthLimiter();
+    this.clientAddress = clientAddress(socket, this.config.auth.trustedProxyAddresses);
+    this.authPending = false;
+    this.closed = false;
+    this.authGeneration = 0;
     this.controllerName = "auth";
     this.socket = socket;
     this.controllers = null;
@@ -26,151 +35,71 @@ _.extend(AuthController.prototype, {
             this.processSuccessfulAnonLogin(this.anonUserName);
         },
 
-        login: function (data) {
-            var self = this;
-
-            if ((data.username == null || data.password == null) && data.token == null) {
-                self.controllers.error.send("Invalid authentication data sent: " + data);
-                return;
+        login: async function(data) {
+            if (!isObject(data) || (data.token == null &&
+                (typeof data.username !== 'string' || !data.username.length || data.username.length > 128 || !isPassword(data.password))) ||
+                (data.token != null && (typeof data.token !== 'string' || data.token.length > 8192))) {
+                return this.authFailure('Invalid authentication data.');
             }
-
-            if(data.token == null) {
-
-                //Username / password authentication
-
-                User.findOne({'username': data.username}).then(function (user) {
-                    if (!user) {
-                        self.sendMessage("auth", {
-                            result: "fail",
-                            data: "Invalid username or password!"
-                        });
-                        return;
+            if (!this.beginAuthentication(data.username)) return;
+            const generation = this.authGeneration;
+            try {
+                let username = data.username;
+                if (data.token != null) {
+                    let decoded;
+                    try { decoded = this.decodeSessionToken(data.token); } catch { decoded = null; }
+                    if (!decoded || typeof decoded.content !== 'string' || !decoded.content.length ||
+                        !Number.isFinite(Number(decoded.createdAt) + Number(decoded.duration)) ||
+                        Number(decoded.createdAt) + Number(decoded.duration) < Date.now()) {
+                        return this.authFailure('Saved login is invalid or expired. Please log in again.');
                     }
-                    if (user.isValidPassword(data.password)) {
-
-                        self.processSuccessfulLogin(data.username);
-                    }
-                    else {
-                        self.sendMessage("auth", {
-                            result: "fail",
-                            data: "Invalid username or password!"
-                        });
-                    }
-                }).catch(function (err) {
-                    self.controllers.error.send(JSON.stringify(err));
-                    return;
-                });
-            }
-            else {
-
-                //Token-based login
-
-                var decodedToken = this.decodeSessionToken(data.token);
-
-                if(!decodedToken) {
-                    self.sendMessage("auth", {
-                        result: "fail",
-                        data: "Token not recognised - use username / password login."
-                    });
-                    return;
+                    username = decoded.content;
                 }
-
-                User.findOne({'username': decodedToken.content}).then(function (user) {
-                    if (!user) {
-                        self.sendMessage("auth", {
-                            result: "fail",
-                            data: "Saved username not found in database!"
-                        });
-                        return;
-                    }
-                    var expiryTime = Number(decodedToken.createdAt) + Number(decodedToken.duration);
-                    if (expiryTime < new Date().getTime()) {
-                        self.sendMessage("auth", {
-                            result: "fail",
-                            data: "Token has expired!"
-                        });
-                        return;
-                    }
-                    self.processSuccessfulLogin(decodedToken.content);
-                }).catch(function (err) {
-                    self.controllers.error.send(JSON.stringify(err));
-                    return;
-                });
+                const user = await User.findOne({ username });
+                if (!user || (data.token == null && !await user.isValidPassword(data.password))) {
+                    return this.authFailure('Invalid username or password!');
                 }
-            },
-
-        register: function (data) {
-            var self = this;
-
-            if(data.username.trim() === "" || data.password.trim() === "") {
-                self.sendMessage("auth", {
-                    result: "fail",
-                    data: "Username and password are required."
-                });
-                return;
+                if (!this.closed && generation === this.authGeneration) this.processSuccessfulLogin(user.username);
+            } catch {
+                this.authFailure('Authentication is busy or unavailable. Please try again shortly.');
+            } finally {
+                this.authPending = false;
             }
+        },
 
-            if(data.username.indexOf("<") > -1 || data.username.indexOf(">") > -1) {
-                self.sendMessage("auth", {
-                    result: "fail",
-                    data: "'<' and '>' are not allowed in the username."
-                });
-                return;
+        register: async function(data) {
+            if (!isObject(data) || !isRegistrationName(data.username) || !isPassword(data.password) ||
+                !data.password.trim() || Buffer.byteLength(data.password) > 72 || data.password !== data.repeat) {
+                return this.authFailure('Use a username of up to 30 characters without slashes or control characters, and matching passwords of up to 72 UTF-8 bytes.');
             }
-
-            if(data.username.length > 30) {
-                self.sendMessage("auth", {
-                    result: "fail",
-                    data: "Usernames are limited to 30 characters."
+            if (!this.beginAuthentication(data.username)) return;
+            const generation = this.authGeneration;
+            try {
+                // This check preserves legacy names. The partial unique index
+                // below is what arbitrates simultaneous new registrations.
+                if (await User.exists({ username: data.username })) return this.authFailure('That username is already taken!');
+                const user = new User({ username: data.username, registrationVersion: 1 });
+                user.password = await user.createHash(data.password);
+                if (this.closed || generation !== this.authGeneration) return;
+                await user.save();
+                if (!this.closed && generation === this.authGeneration) this.sendMessage('auth', {
+                    result: 'success', data: { message: 'registered', token: this.createSessionToken(user.username) }
                 });
-                return;
+            } catch (error) {
+                this.authFailure(error.code === 11000 ? 'That username is already taken!' :
+                    'Registration is busy or unavailable. Please try again shortly.');
+            } finally {
+                this.authPending = false;
             }
-
-            if (data.password !== data.repeat) {
-                self.sendMessage("auth", {
-                    result: "fail",
-                    data: "Password fields do not match!"
-                });
-                return;
-            }
-
-            User.findOne({'username': data.username}).then(function (user) {
-                if (user) {
-                    self.sendMessage("auth", {
-                        result: "fail",
-                        data: "That username is already taken!"
-                    });
-                    return;
-                }
-                else {
-                    var newUser = new User();
-                    newUser.username = data.username;
-                    newUser.password = newUser.createHash(data.password);
-                    newUser.sessionId = self.createSessionToken(newUser.username);
-
-                    newUser.save().then(function () {
-                        self.sendMessage("auth", {
-                            result: "success",
-                            data: {
-                                message: "registered",
-                                token: newUser.sessionId
-                            }
-                        });
-                    }).catch(function (err) {
-                        self.controllers.error.send(JSON.stringify(err));
-                    });
-                }
-            }).catch(function (err) {
-                self.controllers.error.send(JSON.stringify(err));
-                return;
-            });
         },
         logout: function (data) {
 
+            this.authGeneration++;
             this.controllers.chat.broadcastLogoutMessage();
 
             this.authenticatedUserName = null;
             this.controllers.brogue.handlerCollection.clean.call(this.controllers.brogue, null);
+            this.controllers.lobby.userDataListen();
             this.sendMessage("auth", {
                 result: "logout",
                 data: ""
@@ -178,11 +107,31 @@ _.extend(AuthController.prototype, {
         }
     },
 
+    authFailure: function(message) {
+        if (!this.closed) this.sendMessage('auth', { result: 'fail', data: message });
+    },
+    beginAuthentication: function(username) {
+        if (this.closed) return false;
+        if (this.authPending || this.authenticatedUserName) {
+            this.authFailure('An authentication request is already active.');
+            return false;
+        }
+        if (!this.authLimiter.take(this.clientAddress, typeof username === 'string' ? username : null)) {
+            this.authFailure('Too many authentication attempts. Please try again in a minute.');
+            return false;
+        }
+        this.authPending = true;
+        return true;
+    },
+    close: function() {
+        this.closed = true;
+        this.authGeneration++;
+    },
     createSessionToken: function (username) {
         var sessionOpts = {
             cookieName: 'mySession', // cookie name dictates the key name added to the request object
-            secret: config.auth.secret, // should be a large unguessable string
-            duration: config.auth.tokenExpiryTime
+            secret: this.config.auth.secret, // should be a large unguessable string
+            duration: this.config.auth.tokenExpiryTime
         };
 
         var encodedToken = sessions.util.encode(sessionOpts, username, sessionOpts.duration);
@@ -193,7 +142,7 @@ _.extend(AuthController.prototype, {
     decodeSessionToken: function (token) {
         var sessionOpts = {
             cookieName: 'mySession', // cookie name dictates the key name added to the request object
-            secret: config.auth.secret // should be a large unguessable string
+            secret: this.config.auth.secret // should be a large unguessable string
         };
 
         var decodedToken = sessions.util.decode(sessionOpts, token);

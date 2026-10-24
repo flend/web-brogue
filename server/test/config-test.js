@@ -36,6 +36,7 @@ var config = {
     },
     auth : {
         secret: 'asecret',
+        rateLimit: { ipLimit: 10000, accountLimit: 10000 },
         tokenExpiryTime: 90 * 24 * 60 * 60 * 1000
     }
 };

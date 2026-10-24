@@ -35,7 +35,8 @@
     "test": "mocha --timeout 10000",
     "start": "node server.js",
     "db": "node scripts/dev-mongo.js",
-    "migrate:json": "node scripts/migrate-json.js"
+    "migrate:json": "node scripts/migrate-json.js",
+    "audit:users": "node scripts/audit-users.js"
   },
   "devDependencies": {
     "chai": "^6.3.0",

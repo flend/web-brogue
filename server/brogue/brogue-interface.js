@@ -6,6 +6,7 @@ var unixdgram = require('unix-dgram');
 var childProcess = require('child_process');
 var path = require('path');
 var fs = require('fs-extra');
+var gameDirectory = require('../security/username').gameDirectory;
 
 var brogueMode = require('../enum/brogue-mode');
 var config = require('../config');
@@ -41,6 +42,7 @@ function BrogueInterface(username, variant) {
     this.brogueEvents = new events.EventEmitter();
 
     this.disconnected = false;
+    this.lastActiveTime = Date.now();
 }
 
 BrogueInterface.prototype.addDataListener = function(listener) {
@@ -118,6 +120,10 @@ BrogueInterface.prototype.handleIncomingBinaryMessage = function(message, callba
 
     //Command from browser
 
+    if (!Buffer.isBuffer(message) || message.length !== KEY_INPUT_SIZE) {
+        callback(new Error('Invalid mouse or key input.'));
+        return;
+    }
     var controlValue = message.readUInt8(0);
     var messageLength = message.length;
     var ctrlCheck;
@@ -259,10 +265,11 @@ BrogueInterface.prototype.spawnChildProcess = function (args, childWorkingDir) {
 
 BrogueInterface.prototype.attachChildProcess = function() {
     this.attachChildEvents();
-    this.attachChildIdleKiller();
+    if (!this.disconnected) this.attachChildIdleKiller();
 };
 
 BrogueInterface.prototype.attachChildIdleKiller = function() {
+    clearInterval(this.intervalKiller);
     this.intervalKiller = setInterval(this.checkIdleTimeAndKill.bind(this), IDLE_KILLER_INTERVAL);
 };
 
@@ -631,6 +638,8 @@ BrogueInterface.prototype.killBrogue = function(self) {
 };
 
 BrogueInterface.prototype.resetBrogueConnection = function(self) {
+    clearInterval(self.intervalKiller);
+    self.intervalKiller = null;
 
     if(self.brogueSocket != null) {
         try {
@@ -653,6 +662,7 @@ BrogueInterface.prototype.resetBrogueConnection = function(self) {
     self.brogueSocket = null;
     self.brogueClientSocket = null;
     self.disconnected = true;
+    if (self.onDisconnect) self.onDisconnect();
 };
 
 BrogueInterface.prototype.processBrogueEvents = function(self, eventData) {
@@ -700,11 +710,8 @@ BrogueInterface.prototype.getChildWorkingDir = function() {
 };
 
 BrogueInterface.prototype.brogueGameDirectoryPath = function(username, variant, mode) {
-    var dirName = username;
-    if(mode == brogueMode.RECORDING) {
-        dirName += "-recording";
-    }
-    return config.path.GAME_DATA_DIR + variant + "/" + dirName;
+    if (!Object.hasOwn(config.brogueVariants, variant)) throw new Error('Invalid game variant');
+    return gameDirectory(config.path.GAME_DATA_DIR, username, variant, mode === brogueMode.RECORDING);
 };
 
 module.exports = BrogueInterface;

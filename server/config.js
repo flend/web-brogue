@@ -227,7 +227,9 @@ var config = {
     },
     auth : {
         secret: process.env.SESSION_SECRET || 'asecret',
-        tokenExpiryTime: 90 * 24 * 60 * 60 * 1000
+        tokenExpiryTime: 90 * 24 * 60 * 60 * 1000,
+        rateLimit: { ipLimit: 30, accountLimit: 10, windowMs: 60000 },
+        trustedProxyAddresses: ['127.0.0.1', '::1']
     }
 };
 

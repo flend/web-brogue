@@ -3,6 +3,8 @@
 
 module.exports = function(controllers) {
 
+    controllers.auth.close();
+
     // again we need 'this' to be in the context of the controller not this function so bind it
     controllers.brogue.handlerCollection.clean.call(controllers.brogue);
     controllers.lobby.stopUserDataListen();

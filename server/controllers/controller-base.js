@@ -16,8 +16,8 @@ function Controller() {
     this.handlerCollection = {};  // collection of handlername : function
     
     this.handleIncomingMessage = function (message) {
-        if (this.handlerCollection[message.type]) {
-            this.handlerCollection[message.type].call(this, message.data);
+        if (Object.hasOwn(this.handlerCollection, message.type)) {
+            return this.handlerCollection[message.type].call(this, message.data);
         }
         else {
             this.controllers.error.send("Message type incorrectly set: " + JSON.stringify(message));

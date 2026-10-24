@@ -8,7 +8,7 @@ define([
 var ItemView = Backbone.View.extend({
 	tagName: 'div',
 	className: 'ac-result',
-	template: _.template('<%= name %>'),
+	template: _.template('<%- name %>'),
 	events: {
 		'touchstart': 'onSelect', // has to be mousedown or touchstart, so we can prevent blur
 		'mousedown': 'onSelect',

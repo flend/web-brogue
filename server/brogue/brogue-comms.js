@@ -11,10 +11,7 @@ module.exports = {
     getBrogueInterface: function (username, variant, data, mode) {
 
         //This would allow us to support simultaneously playing 2 variants - but that requires refactoring the user model
-        var gameKey = variant + '-' + username;
-        if(mode == brogueMode.RECORDING) {
-            gameKey += "-RECORDING";
-        }
+        var gameKey = JSON.stringify([variant, username, mode === brogueMode.RECORDING]);
 
         if (this.brogueInterface[gameKey]) {
             if(!this.brogueInterface[gameKey].disconnected) {
@@ -25,8 +22,12 @@ module.exports = {
         //If no interface exists, or it is disconnected, start with a new interface
 
         try {
-            this.brogueInterface[gameKey] = new brogue(username, variant);
-            this.brogueInterface[gameKey].start(data, mode);
+            const instance = new brogue(username, variant);
+            this.brogueInterface[gameKey] = instance;
+            instance.onDisconnect = () => {
+                if (this.brogueInterface[gameKey] === instance) delete this.brogueInterface[gameKey];
+            };
+            instance.start(data, mode);
         }
         catch(e) {
             delete this.brogueInterface[gameKey];

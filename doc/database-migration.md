@@ -64,7 +64,7 @@ validation. The script does not stop a running application for you.
 The script scans every input file before writing, detects malformed JSON and
 duplicate IDs, checks the news sequence counter, and imports with
 `--legacy --stopOnError`. It recreates the application's username and unique
-game indexes. It then compares every imported document by ID against a
+game indexes, plus a partial unique username index for new registrations. It then compares every imported document by ID against a
 fingerprint of its source JSON, checks counts, and checks that source files
 have not changed. BSON IDs and dates remain typed, and numeric values are
 compared without converting 64-bit integers to floating-point values. JSON
@@ -80,14 +80,14 @@ MongoDB tool configuration is restricted to its owner and removed on exit.
 
 The completed script was also run against the full rehearsal export on
 2026-10-24: all 233,619 documents imported and passed its source JSON comparisons,
-and both indexes were created. The report is stored locally in
+and the original indexes were created. The report is stored locally in
 `migration-data/script-migration-report.json` (excluded from Git).
 
 An error or interrupted import returns a nonzero exit status and may leave a
 partial target database. The script never drops collections, rolls back, or
 overwrites existing data. Keep writes stopped, investigate the error, and use
 a fresh empty target database for a retry. Exit status zero from a real import
-means all five imports, both indexes, and all document comparisons succeeded.
+means all five imports, the required indexes, and all document comparisons succeeded.
 
 After verifying existing-account login, scores, statistics, and recording paths,
 start the upgraded app with `MONGODB_URI` set to the same URI. Keep the existing
@@ -131,6 +131,39 @@ Use matching collection names and files.
 Do not use `--drop` on the original database or import application JSON into an
 existing database. Preserve the source BSON dump as a fallback and for exact
 comparison during validation.
+
+## Legacy account compatibility after hardening
+
+The existing export contains 18 duplicate username groups (46 extra user records).
+The migration preserves those accounts and their password hashes. New registrations
+carry `registrationVersion: 1` and a partial unique index on `users.username`
+(`unique_registration_username`) arbitrates simultaneous registrations. Registration
+also checks all existing usernames, so an old name cannot be claimed again. Historical
+duplicates are not silently merged, deleted, renamed, or granted new access to shared
+identities. Existing login selection is preserved until ownership is resolved.
+
+Use this read-only audit to get account IDs for an explicit cleanup plan:
+
+```sh
+cd server
+MIGRATION_MONGODB_URI='mongodb://127.0.0.1:27017/brogue_new' \
+  npm run audit:users -- /path/to/new-account-audit.json
+```
+
+The report is owner-readable and includes usernames/IDs, not password hashes.
+Choose a new report file. The script does not change accounts or game records.
+Once duplicates have been resolved, a full unique username index can be planned
+separately; do not add it blindly to this legacy dataset.
+
+New registrations reject path separators, dot/dot-dot, and control characters.
+Ordinary legacy game directories keep their existing paths. Historical unsafe
+usernames still authenticate, but their new games live under a separate
+`.escaped-users` namespace using a hash of username and variant, rather than
+following the old relative path. Finish any such running games before the
+upgrade; the new version intentionally does not reattach through unsafe paths.
+Replays use a separate `.recordings` namespace so a username ending in
+`-recording` cannot alias someone else's replay directory. Existing database
+recording paths remain intact for reading old recordings.
 
 ## Application data to preserve
 

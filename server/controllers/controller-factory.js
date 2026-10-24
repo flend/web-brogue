@@ -3,7 +3,7 @@
 // This way, each controller can call methods on the other controllers if needed, but still be in separate files.
 // controllersList is an array of the names of the controllers (which match the filenames).
 
-module.exports = function(socket, controllersList) {
+module.exports = function(socket, controllersList, options) {
     
     var controllerInstances = {};
     var numControllers = controllersList.length;
@@ -12,7 +12,7 @@ module.exports = function(socket, controllersList) {
         var cName = controllersList[i];
         var cPath = "./" + cName + "-controller";
         var ControllerClass = require(cPath);
-        var controllerInstance = new ControllerClass(socket);
+        var controllerInstance = new ControllerClass(socket, options);
 
         controllerInstances[controllerInstance.controllerName] = controllerInstance;
     }

@@ -12,6 +12,8 @@ module.exports = async function(config) {
 
     var mongoose = require("mongoose");
     await mongoose.connect(config.db.url, { serverSelectionTimeoutMS: 10000 });
+    await require('./security/user-index').ensureRegistrationIndex(require('./user/user-model').collection);
+    const authLimiter = new (require('./security/auth-limiter'))(config.auth.rateLimit);
 
     var app = express();
 
@@ -54,7 +56,7 @@ module.exports = async function(config) {
     usersApi(app, config);
 
     var server = require('http').Server(app);
-    var io = require('socket.io')(server);
+    var io = require('socket.io')(server, { maxHttpBufferSize: 65536 });
 
     io.on('connection', function (socket) {
 
@@ -70,7 +72,7 @@ module.exports = async function(config) {
             "authentication",
             "brogue",
             "chat"
-        ]);
+        ], { config, authLimiter });
 
         var router = new Router(controllers);
 
@@ -96,6 +98,7 @@ module.exports = async function(config) {
     app.close = async function() {
         await new Promise(resolve => io.close(resolve));
         accessLogStream.end();
+        await require('./user/passwords').close();
         await mongoose.disconnect();
     };
     return app;

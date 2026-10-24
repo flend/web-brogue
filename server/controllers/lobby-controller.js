@@ -26,6 +26,7 @@ _.extend(LobbyController.prototype, {
     },
     
     userDataListen : function(){
+        this.stopUserDataListen();
         var self = this;
         this.broadcastInterval = setInterval(function(){
             self.sendAllUserData();
@@ -33,6 +34,7 @@ _.extend(LobbyController.prototype, {
     },
     stopUserDataListen: function(){
         clearInterval(this.broadcastInterval);
+        this.broadcastInterval = null;
     },
     sendAllUserData: function(){
         

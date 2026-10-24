@@ -98,12 +98,12 @@
         <ul id="play-brogue-list">
         <%_.forEach(variants, function (i) { if(!i.disabled) {%>
             <li>
-                <a id="start-brogue-<%=i.code%>" href="#start-brogue-<%=i.code%>">Play</a> /
-                <a id="start-brogue-seed-<%=i.code%>" href="#start-broge-seed-<%=i.code%>">seed</a>
+                <a id="start-brogue-<%-i.code%>" href="#start-brogue-<%-i.code%>">Play</a> /
+                <a id="start-brogue-seed-<%-i.code%>" href="#start-broge-seed-<%-i.code%>">seed</a>
                 <%if(i.default || i.highlight) {%>
-                    <strong><%=i.display%></strong>
+                    <strong><%-i.display%></strong>
                 <%} else {%>
-                    <%=i.display%>
+                    <%-i.display%>
                 <%}%>
             </li>
         <%}})%>
@@ -152,13 +152,13 @@
 </script>
 
 <script id="console-chat-template" type="text/template">
-    <button id="<%= prefix %>-chat-show-button" class="console-chat-buttons <%=chatHiddenStatus%>">Chat</button>
-    <button id="<%= prefix %>-chat-hide-button" class="console-chat-buttons <%=chatShownStatus%>">Hide Chat</button>
-    <div id="<%= prefix %>-chat-inner" class="console-chat-inner <%=chatShownStatus%>">
-        <ul id="<%= prefix %>-chat-messages" class="console-chat-messages"><%= messageListItems %></ul>
+    <button id="<%- prefix %>-chat-show-button" class="console-chat-buttons <%-chatHiddenStatus%>">Chat</button>
+    <button id="<%- prefix %>-chat-hide-button" class="console-chat-buttons <%-chatShownStatus%>">Hide Chat</button>
+    <div id="<%- prefix %>-chat-inner" class="console-chat-inner <%-chatShownStatus%>">
+        <ul id="<%- prefix %>-chat-messages" class="console-chat-messages"><%= messageListItems %></ul>
         <form action="">
-            <input id="<%= prefix %>-chat-input" autocomplete="off" />
-            <button type="submit", id="<%= prefix %>-chat-send-button">Send</button>
+            <input id="<%- prefix %>-chat-input" autocomplete="off" />
+            <button type="submit", id="<%- prefix %>-chat-send-button">Send</button>
         </form>
     </div>
 </script>
@@ -172,11 +172,11 @@
         <% } %>
         <li>All-time Top Scores:
             <%_.forEach(variants, function (i,j) {%><% if (j) { %> &bull; <% } %>
-            <a id="all-scores-variant-<%=i.code%>" href="#all-scores-variant-<%=i.code%>"><%=i.display%></a>
+            <a id="all-scores-variant-<%-i.code%>" href="#all-scores-variant-<%-i.code%>"><%-i.display%></a>
             <%})%>
         </li>
     </ul>
-    <p><%= scoresTypeSelected %></p>
+    <p><%- scoresTypeSelected %></p>
     <div id="all-scores-grid" />
     <div id="all-scores-paginator" />
 </script>
@@ -204,10 +204,10 @@
             <a id="headerLobby" href="#lobbyLink">Lobby</a> &bull;
             <a href="https://brogue.fandom.com/wiki/Brogue_Wiki" alt="Brogue Wiki" target="_blank">Wiki</a> &bull;
         <% } %>
-        <%= username %>
-        <% if (observing) { %> &bull; Observing <%= observingUsername %><% } %>
+        <%- username %>
+        <% if (observing) { %> &bull; Observing <%- observingUsername %><% } %>
         <% if (playing) { %> &bull; Playing<% } %>
-        <% if (recording) { %> &bull; Watching <%= recordingId %><% } %>
+        <% if (recording) { %> &bull; Watching <%- recordingId %><% } %>
         <% if (loggedIn) { %> &bull; <a id="logout" href="#logout">Logout</a> <% } %>
     </div>
 </script>
@@ -223,7 +223,7 @@
 </script>
 
 <script id="site-news-row" type="text/template">
-    <li><%= date %><ul><li><%= description %></li></ul>
+    <li><%- date %><ul><li><%= description %></li></ul>
 </script>
 
 <script id="current-games-heading" type ="text/template">
@@ -246,20 +246,20 @@
 </script>
 
 <script id="current-games-row" type="text/template">
-    <td><%= userName %></td>
-    <td><%= prettySeeded %></td>
-    <td><%= prettyVariant %></td>
-    <td><% if (easyMode) { %>&<% } %><%= deepestLevel %></td>
-    <td><%= prettyScore %></td>
-    <td><%= formattedIdle %></td>
-    <td><a id="observe-game" data-username="<%= userName %>" href="#brogue"><%= action %></a></td>
-    <td><a id="link-game" href="#brogue"><%= linkAction %></a></td>
+    <td><%- userName %></td>
+    <td><%- prettySeeded %></td>
+    <td><%- prettyVariant %></td>
+    <td><% if (easyMode) { %>&<% } %><%- deepestLevel %></td>
+    <td><%- prettyScore %></td>
+    <td><%- formattedIdle %></td>
+    <td><a id="observe-game" data-username="<%- userName %>" href="#brogue"><%- action %></a></td>
+    <td><a id="link-game" href="#brogue"><%- linkAction %></a></td>
 </script>
 
 
 <script id="file-row" type="text/template">
-    <td><a class="file-link" href="#"><%= fileName %></a></td>
-    <td><%= formattedModified %></td>
+    <td><a class="file-link" href="#"><%- fileName %></a></td>
+    <td><%- formattedModified %></td>
 </script>
 
 <script id="stats-heading" type="text/template">
@@ -282,7 +282,7 @@
     <h3>Deaths by Cause</h3>
     <p id="deaths-by-cause-list">
         <%_.forEach(variants, function (i,j) {%><% if (j) { %> &bull; <% } %>
-        <a id="deaths-by-cause-variant-<%=i.code%>" href="#deaths-by-cause-variant-<%=i.code%>"><%=i.display%></a>
+        <a id="deaths-by-cause-variant-<%-i.code%>" href="#deaths-by-cause-variant-<%-i.code%>"><%-i.display%></a>
         <%})%>
     </p>
     <p>The top 3 causes of death by the level on which they happened, in <span id="death-cause-name">variant</span>.</p>
@@ -293,7 +293,7 @@
     <h3>Deaths by Level</h3>
     <p id="deaths-by-level-list">
         <%_.forEach(variants, function (i,j) {%><% if (j) { %> &bull; <% } %>
-        <a id="deaths-by-level-variant-<%=i.code%>" href="#deaths-by-level-variant-<%=i.code%>"><%=i.display%></a>
+        <a id="deaths-by-level-variant-<%-i.code%>" href="#deaths-by-level-variant-<%-i.code%>"><%-i.display%></a>
         <%})%>
     </p>
     <p>Number of deaths per level in <span id="deaths-by-level-name">variant</span>:</p>
@@ -304,7 +304,7 @@
     <h3>Probability of Death by Level</h3>
     <p id="probability-deaths-by-level-list">
         <%_.forEach(variants, function (i,j) {%><% if (j) { %> &bull; <% } %>
-        <a id="deaths-probability-by-level-variant-<%=i.code%>" href="#deaths-probability-by-level-variant-<%=i.code%>"><%=i.display%></a>
+        <a id="deaths-probability-by-level-variant-<%-i.code%>" href="#deaths-probability-by-level-variant-<%-i.code%>"><%-i.display%></a>
         <%})%>
     </p>
     <p>The probability of dying on a particular level, having reached that level, in <span id="death-prob-name">variant</span>. An analogue of perceived difficulty.</p>
@@ -316,19 +316,19 @@
     <p id="general-stats-by-level-list">
         <a id="general-stats-by-level-variant-all" href="#deaths-probability-by-level-variant-all">All games</a></li>
         <%_.forEach(variants, function (i) {%> &bull;
-            <a id="general-stats-by-level-variant-<%=i.code%>" href="#general-stats-by-level-variant-<%=i.code%>"><%=i.display%></a>
+            <a id="general-stats-by-level-variant-<%-i.code%>" href="#general-stats-by-level-variant-<%-i.code%>"><%-i.display%></a>
         <%})%>
     </p>
-    <p>Variant: <%= stats.variantName %></p>
+    <p>Variant: <%- stats.variantName %></p>
     <ul>
-        <li>Total games played: <%= stats.totalGames %> (easy mode: <%= stats.totalEasyModeGames %>)</li>
-        <li>Total victories: <%= stats.totalNormalModeVictories %></li>
-        <li>Total masteries: <%= stats.totalNormalModeSuperVictories %></li>
-        <li>Total lumenstones stolen: <%= stats.totalLumenstones %></li>
-        <li>Total levels explored: <%= stats.totalLevels %></li>
-        <li>Last victory: <%= stats.lastVictoryDate %> (by <%= stats.lastVictoryUser %>)</li>
-        <li>Longest [last] streak: <%= stats.lastStreakLength %> victories on <%= stats.lastStreakDate %> (by <%= stats.lastStreakUser %>)</li>
-        <li>Longest [last] mastery streak: <%= stats.lastMasteryStreakLength %> masteries on <%= stats.lastMasteryStreakDate %> (by <%= stats.lastMasteryStreakUser %>)</li>
+        <li>Total games played: <%- stats.totalGames %> (easy mode: <%- stats.totalEasyModeGames %>)</li>
+        <li>Total victories: <%- stats.totalNormalModeVictories %></li>
+        <li>Total masteries: <%- stats.totalNormalModeSuperVictories %></li>
+        <li>Total lumenstones stolen: <%- stats.totalLumenstones %></li>
+        <li>Total levels explored: <%- stats.totalLevels %></li>
+        <li>Last victory: <%- stats.lastVictoryDate %> (by <%- stats.lastVictoryUser %>)</li>
+        <li>Longest [last] streak: <%- stats.lastStreakLength %> victories on <%- stats.lastStreakDate %> (by <%- stats.lastStreakUser %>)</li>
+        <li>Longest [last] mastery streak: <%- stats.lastMasteryStreakLength %> masteries on <%- stats.lastMasteryStreakDate %> (by <%- stats.lastMasteryStreakUser %>)</li>
         <p>(victories and masteries exclude easy mode)</p>
     </ul>
 </script>
@@ -344,17 +344,17 @@
 </script>
 
 <script id="user-stats-selected-template" type="text/template">
-    <div>Statistics for: <%= userName %></div>
+    <div>Statistics for: <%- userName %></div>
 </script>
 
 <script id="user-stats-scores-heading" type="text/template">
     <h2>High Scores</h2>
     <p id="user-stats-scores-options-list">
         <%_.forEach(variants, function (i,j) {%><% if (j) { %> &bull; <% } %>
-        <a id="user-stats-scores-variant-<%=i.code%>" href="#user-stats-scores-variant-<%=i.code%>"><%=i.display%></a>
+        <a id="user-stats-scores-variant-<%-i.code%>" href="#user-stats-scores-variant-<%-i.code%>"><%-i.display%></a>
         <%})%>
     </p>
-    <p><%= scoresTypeSelected %></p>
+    <p><%- scoresTypeSelected %></p>
     <div id="user-stats-scores-grid" />
     <div id="user-stats-scores-paginator" />
 </script>

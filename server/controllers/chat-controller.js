@@ -26,13 +26,17 @@ _.extend(ChatController.prototype, {
 
             //Incoming message from client
 
-            var incomingMessage = data.data;
+            if (!data || typeof data.data !== 'string' || typeof data.channel !== 'string') {
+                this.controllers.error.send('Invalid chat message.');
+                return;
+            }
+            var incomingMessage = data.data.slice(0, 1024);
 
             if(incomingMessage.trim().length == 0) {
                 return
             }
 
-            var messageTruncated = this.truncateString(incomingMessage, this.truncateStringLength);
+            var messageTruncated = this.truncateString(incomingMessage, 1024);
             var messageSanitised = escape(incomingMessage);
 
             //Send to all other listeners in the same room
@@ -111,11 +115,13 @@ _.extend(ChatController.prototype, {
         });
     },
     enterRoom: function(roomName) {
+        if (this.roomName && this.roomName !== roomName) this.socket.leave(this.roomName);
         this.roomName = roomName;
         this.socket.join(roomName);
     },
     leaveRoom: function(roomName) {
-        this.socket.leave(roomName);
+        if (roomName) this.socket.leave(roomName);
+        if (this.roomName === roomName) this.roomName = null;
     },
     broadcastLoginMessage: function() {
         this.broadcastUserStatusMessage("logged in.")

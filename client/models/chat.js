@@ -15,7 +15,9 @@ define([
             showChat: true
         }},
         addChatMessage: function(message) {
-            this.get("chatMessages").push(message);
+            const messages = this.get("chatMessages");
+            messages.push(message);
+            if (messages.length > this.get("maxMessages")) messages.splice(0, messages.length - this.get("maxMessages"));
         },
 
         addStatusMessageWithTime: function(message) {
@@ -35,7 +37,7 @@ define([
             }, this);
         },
         formatSystemMessage: function(date, message) {
-            return "[" + this.formatDate(new Date()) + " " + message + "]";
+            return "[" + this.formatDate(new Date()) + " " + _.escape(message) + "]";
         },
         formatChatMessage: function(username, date, message) {
             return "(" + this.formatDate(date) + ") " + this.colorize(username) + ": " + message;
@@ -66,9 +68,9 @@ define([
             let b = 0.001 + ((hash >>> 20) % 1000) / 1000;
             // enforce a specific brightness
             while (true) {
-                luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
                 if (luma >= 0.55 && luma <= 0.65) break;
-                k = 0.6 / luma;
+                const k = 0.6 / luma;
                 r = Math.min(1, r * k);
                 g = Math.min(1, g * k);
                 b = Math.min(1, b * k);
@@ -77,7 +79,7 @@ define([
             const R = Math.round(255 * Math.pow(r, 0.4545));
             const G = Math.round(255 * Math.pow(g, 0.4545));
             const B = Math.round(255 * Math.pow(b, 0.4545));
-            return '<span style="color:rgb(' + R + ',' + G + ',' + B + ')">' + str + '</span>';
+            return '<span style="color:rgb(' + R + ',' + G + ',' + B + ')">' + _.escape(str) + '</span>';
         },
 
         setUsername: function(username) {

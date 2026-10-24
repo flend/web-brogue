@@ -70,6 +70,11 @@ Server global configuration variables are defined in `server/config.js`.
 `MONGODB_URI` overrides the default `mongodb://127.0.0.1:27017/brogue`;
 `PORT` overrides HTTP port 8080; `SESSION_SECRET` overrides the configured token secret.
 Keep your existing session secret during migration to preserve saved login tokens.
+Authentication work runs in a bounded pool of two worker threads. `config.auth.rateLimit`
+defaults to 30 attempts per IP and 10 per IP/username pair per minute, shared across
+connections. `trustedProxyAddresses` defaults to loopback proxies; forwarding headers
+from other peers are ignored. Set this list to the actual proxy addresses if needed.
+Only trust proxies that append or replace `X-Forwarded-For` with the real client address.
 Client configuration variables are defined in `client/config.js`.
 
 In particular, make sure to get the client and server to agree on the websocketPort.

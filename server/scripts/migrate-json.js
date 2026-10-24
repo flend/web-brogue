@@ -188,6 +188,7 @@ async function migrate({ directory, uri, checkOnly = false, reportFile, mongoimp
                 log('Imported ' + source.name);
             }
             await db.collection('users').createIndex({ username: 1 }, { name: 'username_1' });
+            await require('../security/user-index').ensureRegistrationIndex(db.collection('users'));
             await db.collection('gamerecords').createIndex({ date: 1, username: -1 }, {
                 name: 'date_1_username_-1', unique: true
             });
@@ -213,7 +214,7 @@ async function migrate({ directory, uri, checkOnly = false, reportFile, mongoimp
                 throw new Error('Unexpected collections appeared during import.');
             }
             report.verified = true;
-            report.indexes = ['users.username_1', 'gamerecords.date_1_username_-1 (unique)'];
+            report.indexes = ['users.username_1', 'users.unique_registration_username (partial unique)', 'gamerecords.date_1_username_-1 (unique)'];
         }
         report.elapsedSeconds = (Date.now() - started) / 1000;
         if (reportFile) await fsp.writeFile(reportFile, JSON.stringify(report, null, 2) + '\n', { flag: 'wx', mode: 0o600 });

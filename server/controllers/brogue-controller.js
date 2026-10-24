@@ -33,8 +33,8 @@ BrogueController.prototype = new Controller();
 _.extend(BrogueController.prototype, {
     controllerName: "brogue",
     handleIncomingMessage: function (message) {
-        if (this.handlerCollection[message.type]) {
-            this.handlerCollection[message.type].call(this, message.data);
+        if (Object.hasOwn(this.handlerCollection, message.type)) {
+            return this.handlerCollection[message.type].call(this, message.data);
         }
         else {
             this.controllers.error.send("Message type incorrectly set: " + JSON.stringify(message));
@@ -68,7 +68,14 @@ _.extend(BrogueController.prototype, {
     },
 
     stopInteractingWithCurrentGame: function() {
+        clearTimeout(this.refreshTimer);
+        this.refreshTimer = null;
+        if (this.mode === brogueMode.RECORDING && this.brogueInterface && !this.brogueInterface.disconnected) {
+            this.brogueInterface.killBrogue(this.brogueInterface);
+        }
         this.removeBrogueListeners();
+        this.brogueInterface = null;
+        this.mode = null;
     },
 
     removeBrogueListeners: function() {
@@ -77,13 +84,13 @@ _.extend(BrogueController.prototype, {
         if(this.brogueInterface) {
             //console.log("Removing data listener. Before " + this.brogueInterface.brogueEvents.listeners('data').length);
 
-            this.brogueInterface.removeDataListener(this.dataListener);
+            if (typeof this.dataListener === "function") this.brogueInterface.removeDataListener(this.dataListener);
             //console.log("Removing data listener. After " + this.brogueInterface.brogueEvents.listeners('data').length);
 
-            this.brogueInterface.removeStatusListener(this.statusListener);
-            this.brogueInterface.removeQuitListener(this.quitListener);
-            this.brogueInterface.removeErrorListener(this.errorListener);
-            this.brogueInterface.removeEventListener(this.eventListener);
+            if (typeof this.statusListener === "function") this.brogueInterface.removeStatusListener(this.statusListener);
+            if (typeof this.quitListener === "function") this.brogueInterface.removeQuitListener(this.quitListener);
+            if (typeof this.errorListener === "function") this.brogueInterface.removeErrorListener(this.errorListener);
+            if (typeof this.eventListener === "function") this.brogueInterface.removeEventListener(this.eventListener);
         }
     },
 
@@ -197,7 +204,7 @@ _.extend(BrogueController.prototype, {
     },
 
     watchRecording: function (data) {
-        if (!data || !data.recording) {
+        if (!data || typeof data.recording !== 'string' || data.recording.length > 256) {
             this.sendFailedToStartGameMessage("No game record given to watch.");
             console.error("No game record given to watch.");
             return;
@@ -272,7 +279,7 @@ _.extend(BrogueController.prototype, {
     },
 
     isValidVariant: function(variant) {
-        return _.contains(_.keys(config.brogueVariants), variant);
+        return typeof variant === 'string' && Object.hasOwn(config.brogueVariants, variant);
     },
 
     maxSeedForVariantFailureMessage: function(variant) {
@@ -334,7 +341,7 @@ _.extend(BrogueController.prototype, {
             else {
                 //Observing
 
-                if (!data || !data.username) {
+                if (typeof data.username !== 'string' || !data.username.length || data.username.length > 128) {
                     this.sendFailedToStartGameMessage("No username given to observe.");
                     return;
                 }
@@ -345,7 +352,7 @@ _.extend(BrogueController.prototype, {
                 if (data.username === this.controllers.auth.authenticatedUserName) {
                     this.brogueGameChatId = this.getCurrentGameChatId(usernameForGame, data.variant);
                     mode = brogueMode.GAME;
-                    this.brogueCurrentGamesId = currentGames.getGameName(username, data.variant);
+                    this.brogueCurrentGamesId = currentGames.getGameName(usernameForGame, data.variant);
                 }
                 else {
                     usernameForGame = data.username;
@@ -431,7 +438,7 @@ _.extend(BrogueController.prototype, {
 
         //Refresh once the game has had a chance to start (if required)
         var refreshMethod = this.brogueInterface.sendRefreshScreenAndInitialiseCommands.bind(this.brogueInterface);
-        setTimeout(refreshMethod, 250, initialisationCmds);
+        this.refreshTimer = setTimeout(refreshMethod, 250, initialisationCmds);
     },
 
     sendFailedToStartGameMessage: function(message) {
@@ -484,7 +491,7 @@ _.extend(BrogueController.prototype, {
             }
 
             if(this.mode == brogueMode.RECORDING) {
-                this.endBrogueSessionAndKillInterface();
+                return this.endBrogueSessionAndKillInterface();
             }
 
             this.returnToLobby();
@@ -498,12 +505,10 @@ _.extend(BrogueController.prototype, {
                 currentGames.setState(this.brogueCurrentGamesId, brogueState.INACTIVE);
             }
 
-            else if(this.mode == brogueMode.RECORDING) {
-                this.endBrogueSessionAndKillInterface();
-            }
-
-            //Just kill off the controller gracefully, leave the process (both observing and playing)
+            // Replays end with their connection. Live games remain available
+            // for reconnecting players and observers.
             this.stopInteractingWithCurrentGame();
+            this.controllers.chat.leaveRoom(this.brogueGameChatId);
         }
     },
 
