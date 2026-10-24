@@ -6,11 +6,12 @@ require.config({
         underscore : "libs/underscore",
         backbone : "libs/backbone",
         moment: "libs/moment",
-        backbonePaginator: "libs/backbone.paginator",
+        backbonePaginator: "libs/backbone-paginator",
+        "backbone.paginator": "libs/backbone.paginator",
         backboneAutocomplete: "libs/autocomplete-view",
         backgrid: "libs/backgrid",
         backgridPaginator: "libs/backgrid-paginator",
-        io: "socket.io/socket.io.js",
+        io: "/socket.io/socket.io",
         chart: "libs/chart"
     },
     shim: {
@@ -274,7 +275,7 @@ require([
     var throttledResize = _.debounce(function(){
             consoleView.resize();
         }, 100);
-    $(window).resize(throttledResize);
+    $(window).on('resize', throttledResize);
 
     // dpad translation and scaling
     if(window.visualViewport) {

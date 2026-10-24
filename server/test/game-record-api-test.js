@@ -7,7 +7,7 @@ var assert = require("chai").assert;
 var server = require("./server-test");
 var config = require("./config-test");
 
-var db = mongoose.createConnection(config.db.url);
+
 
 describe("api/games", function(){
 
@@ -40,20 +40,24 @@ describe("api/games", function(){
             variant: "GBROGUE"
         };
 
-        gameRecord.create([gameRecord1, gameRecord2], function() {
+        gameRecord.create([gameRecord1, gameRecord2]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("returns status 200", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
@@ -61,7 +65,7 @@ describe("api/games", function(){
     });
 
     it("returns ids with games", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .end(function(err, res) {
@@ -73,7 +77,7 @@ describe("api/games", function(){
     });
 
     it("returns recording IDs (not filenames) with games", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .end(function(err, res) {
@@ -85,7 +89,7 @@ describe("api/games", function(){
     });
 
     it("returns download IDs with games where they can be downloaded", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .end(function(err, res) {
@@ -98,7 +102,7 @@ describe("api/games", function(){
     });
 
     it("returns link IDs with games where they can be loaded from a link", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .end(function(err, res) {
@@ -111,7 +115,7 @@ describe("api/games", function(){
     });
 
     it("returns multiple games", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .end(function(err, res) {
@@ -125,7 +129,7 @@ describe("api/games", function(){
     });
 
     it("return all expected static metadata about a game", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .end(function(err, res) {
@@ -133,7 +137,7 @@ describe("api/games", function(){
                 var gameData = resText.data;
                 var gameId = gameData[0]._id;
 
-                request(server)
+                request(server.app)
                     .get("/api/games/id/" + gameId)
                     .set('Accept', 'application/json')
                     .end(function(err, res) {
@@ -156,7 +160,7 @@ describe("api/games", function(){
     });
 
     it("returns false for missing seeded value in database", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .end(function(err, res) {
@@ -164,7 +168,7 @@ describe("api/games", function(){
                 var gameData = resText.data;
                 var gameId = gameData[1]._id;
 
-                request(server)
+                request(server.app)
                     .get("/api/games/id/" + gameId)
                     .set('Accept', 'application/json')
                     .end(function(err, res) {
@@ -178,7 +182,7 @@ describe("api/games", function(){
     });
 
     it("allows games to be retrieved by ID", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .end(function(err, res) {
@@ -186,7 +190,7 @@ describe("api/games", function(){
                 var gameData = resText.data;
                 var gameId = gameData[0]._id;
 
-                request(server)
+                request(server.app)
                     .get("/api/games/id/" + gameId)
                     .set('Accept', 'application/json')
                     .end(function(err, res) {
@@ -322,20 +326,24 @@ describe("api/games/lastwins", function(){
             variant: "RAPIDBROGUE"
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5, gameRecord6, gameRecord7, gameRecord8, gameRecord9], function() {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5, gameRecord6, gameRecord7, gameRecord8, gameRecord9]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("returns status 200", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games/lastwins")
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
@@ -343,7 +351,7 @@ describe("api/games/lastwins", function(){
     });
 
     it("returns most recent wins for each variant, sorted by variant", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games/lastwins")
             .set('Accept', 'application/json')
             .end(function(err, res) {
@@ -364,7 +372,7 @@ describe("api/games/lastwins", function(){
     });
 
     it("returns most recent wins for each variant, filtered and sorted by variant", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games/lastwins")
             .set('Accept', 'application/json')
             .query({ variant: "GBROGUE,RAPIDBROGUE" })
@@ -413,28 +421,32 @@ describe("api/games filtering by variant", function(){
             seeded: false
         };
 
-        gameRecord.create([gameRecord1, gameRecord2], function() {
+        gameRecord.create([gameRecord1, gameRecord2]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("filters games based on non-default variant", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .query({ variant: 'GBROGUE' })
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
                 var gameData = resText.data;
-                expect(gameData).to.have.length.of(1);
-                expect(gameData[0]).to.have.deep.property('variant', "GBROGUE");
+                expect(gameData).to.have.lengthOf(1);
+                expect(gameData[0]).to.have.nested.property('variant', "GBROGUE");
                 done();
             });
     });
@@ -474,42 +486,46 @@ describe("api/games supporting 64-bit seeds", function(){
             seeded: true
         };
 
-        gameRecord.create([gameRecord1, gameRecord2], function() {
+        gameRecord.create([gameRecord1, gameRecord2]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("correctly composes 64-bit seeds", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .query({ variant: 'GBROGUE' })
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
                 var gameData = resText.data;
-                expect(gameData).to.have.length.of(2);
-                expect(gameData[1]).to.have.deep.property('seed', '858993459300');
+                expect(gameData).to.have.lengthOf(2);
+                expect(gameData[1]).to.have.nested.property('seed', '858993459300');
                 done();
             });
     });
 
     it("supports 64-bit seeds up to 9223372036854775807", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .query({ variant: 'GBROGUE' })
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
                 var gameData = resText.data;
-                expect(gameData).to.have.length.of(2);
-                expect(gameData[0]).to.have.deep.property('seed', '9223372036854775807');
+                expect(gameData).to.have.lengthOf(2);
+                expect(gameData[0]).to.have.nested.property('seed', '9223372036854775807');
                 done();
             });
     });
@@ -561,64 +577,68 @@ describe("api/games sorting", function(){
             seeded: true
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3], function() {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("sorts games by date ascending when no order given", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .query({ sort: 'date' })
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
                 var gameData = resText.data;
-                expect(gameData).to.have.length.of(3);
-                expect(gameData[0]).to.have.deep.property('score', 1003);
-                expect(gameData[1]).to.have.deep.property('score', 1004);
-                expect(gameData[2]).to.have.deep.property('score', 12);
+                expect(gameData).to.have.lengthOf(3);
+                expect(gameData[0]).to.have.nested.property('score', 1003);
+                expect(gameData[1]).to.have.nested.property('score', 1004);
+                expect(gameData[2]).to.have.nested.property('score', 12);
 
                 done();
             });
     });
 
     it("sorts games by date descending when desc order given", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .query({ sort: 'date', order: 'desc' })
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
                 var gameData = resText.data;
-                expect(gameData).to.have.length.of(3);
-                expect(gameData[0]).to.have.deep.property('score', 12);
-                expect(gameData[1]).to.have.deep.property('score', 1004);
-                expect(gameData[2]).to.have.deep.property('score', 1003);
+                expect(gameData).to.have.lengthOf(3);
+                expect(gameData[0]).to.have.nested.property('score', 12);
+                expect(gameData[1]).to.have.nested.property('score', 1004);
+                expect(gameData[2]).to.have.nested.property('score', 1003);
 
                 done();
             });
     });
 
     it("sorts games by score descending when desc order given", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .query({ sort: 'score', order: 'desc' })
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
                 var gameData = resText.data;
-                expect(gameData).to.have.length.of(3);
-                expect(gameData[0]).to.have.deep.property('score', 1004);
-                expect(gameData[1]).to.have.deep.property('score', 1003);
-                expect(gameData[2]).to.have.deep.property('score', 12);
+                expect(gameData).to.have.lengthOf(3);
+                expect(gameData[0]).to.have.nested.property('score', 1004);
+                expect(gameData[1]).to.have.nested.property('score', 1003);
+                expect(gameData[2]).to.have.nested.property('score', 12);
 
                 done();
             });
@@ -699,20 +719,24 @@ describe("api/games paging", function(){
             seeded: true
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5], function() {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("returns correct pageCount and itemCount", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .query({ sort: 'date', page: 2, limit: 2 })
@@ -728,16 +752,16 @@ describe("api/games paging", function(){
         });
 
     it("returns correct games in pages", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .query({ sort: 'date', page: 2, limit: 2 })
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
                 var gameData = resText.data;
-                expect(gameData).to.have.length.of(2);
-                expect(gameData[0]).to.have.deep.property('score', 12);
-                expect(gameData[1]).to.have.deep.property('score', 13);
+                expect(gameData).to.have.lengthOf(2);
+                expect(gameData[0]).to.have.nested.property('score', 12);
+                expect(gameData[1]).to.have.nested.property('score', 13);
                 done();
             });
     });
@@ -789,43 +813,47 @@ describe("api/games filtering by variant and username", function(){
             seeded: false
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3], function() {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("filters games based on username only", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .query({ username: 'flend' })
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
                 var gameData = resText.data;
-                expect(gameData).to.have.length.of(2);
-                expect(gameData[0]).to.have.deep.property('seed', '200');
-                expect(gameData[1]).to.have.deep.property('seed', '2004');
+                expect(gameData).to.have.lengthOf(2);
+                expect(gameData[0]).to.have.nested.property('seed', '200');
+                expect(gameData[1]).to.have.nested.property('seed', '2004');
                 done();
             });
     });
 
     it("filters games based on username and variant", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .query({ username: 'flend', variant: 'BROGUE' })
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
                 var gameData = resText.data;
-                expect(gameData).to.have.length.of(1);
-                expect(gameData[0]).to.have.deep.property('seed', '2004');
+                expect(gameData).to.have.lengthOf(1);
+                expect(gameData[0]).to.have.nested.property('seed', '2004');
                 done();
             });
     });
@@ -887,29 +915,33 @@ describe("api/games filtering by previousdays", function(){
             seeded: false
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3], function() {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("returns correct number of games by previousdays setting", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .query({ previousdays: 2 })
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
                 var gameData = resText.data;
-                expect(gameData).to.have.length.of(2);
-                expect(gameData[0]).to.have.deep.property('score', 1);
-                expect(gameData[1]).to.have.deep.property('score', 2);
+                expect(gameData).to.have.lengthOf(2);
+                expect(gameData[0]).to.have.nested.property('score', 1);
+                expect(gameData[1]).to.have.nested.property('score', 2);
                 done();
             });
     });
@@ -984,29 +1016,33 @@ describe("api/games filtering by result", function(){
             variant: "BROGUE"
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5], function() {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("filters games based on result", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/games")
             .set('Accept', 'application/json')
             .query({ result: 2, sort: 'date', order: 'desc'})
             .end(function(err, res) {
                 var resText = JSON.parse(res.text);
                 var gameData = resText.data;
-                expect(gameData).to.have.length.of(2);
-                expect(gameData[0]).to.have.deep.property('seed', '5');
-                expect(gameData[1]).to.have.deep.property('seed', '2');
+                expect(gameData).to.have.lengthOf(2);
+                expect(gameData[0]).to.have.nested.property('seed', '5');
+                expect(gameData[1]).to.have.nested.property('seed', '2');
                 done();
             });
     });

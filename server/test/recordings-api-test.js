@@ -7,7 +7,7 @@ var assert = require("chai").assert;
 var server = require("./server-test");
 var config = require("./config-test");
 
-var db = mongoose.createConnection(config.db.url);
+
 
 describe("api/recordings", function(){
 
@@ -54,32 +54,36 @@ describe("api/recordings", function(){
 
         var self = this;
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3], function(err, doc) {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3]).then(function (doc) {
             self.currentTest.gameId1 = doc[0]._id;
             self.currentTest.gameId2 = doc[1]._id;
             self.currentTest.gameId3 = doc[2]._id;
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("returns status 404 for non-existent recordings", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/recordings/doesnotexist")
             .expect(404, done)
     });
 
     it("downloads a file with the right headers for existing recordings", function(done) {
-        
+
         var self = this;
 
-        request(server)
+        request(server.app)
             .get("/api/recordings/" + this.test.gameId1)
             .end(function(err, res) {
                 expect(res.status).to.equal(200);
@@ -89,15 +93,15 @@ describe("api/recordings", function(){
     });
 
     it("returns for 404 for valid recordings of old versions", function(done) {
-        
-        request(server)
+
+        request(server.app)
             .get("/api/recordings/" + this.test.gameId2)
             .expect(404, done);
     });
 
     it("returns for 404 for missing recording files", function(done) {
-        
-        request(server)
+
+        request(server.app)
             .get("/api/recordings/" + this.test.gameId3)
             .expect(404, done);
     });

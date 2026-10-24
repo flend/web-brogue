@@ -1,16 +1,14 @@
 var mongoose = require('mongoose');
 var GameRecord = require("../database/game-record-model");
-var paginate = require("express-paginate");
 var sanitize = require('mongo-sanitize');
 var _ = require("underscore");
 var stats = require('../stats/stats.js');
-var Integer = require('integer');
 const brogueConstants = require('../brogue/brogue-constants');
 
 module.exports = function(app, config) {
 
     var sortFromQueryParams = function(req, defaultSort) {
-        
+
         if (req.query.sort) {
             if (req.query.order && req.query.order === "desc") {
                 return { [sanitize(req.query.sort)] : -1 }
@@ -45,8 +43,8 @@ module.exports = function(app, config) {
 
             // Compose 64-bit seeds
             if (gameRecord.seedHigh) {
-                var seed64 = Integer.fromNumber(gameRecord.seedHigh);
-                seed64 = seed64.shiftLeft(32).add(gameRecord.seed);
+                var seed64 = BigInt(gameRecord.seedHigh);
+                seed64 = (seed64 << 32n) + BigInt(gameRecord.seed);
                 filteredRecord.seed = seed64.toString();
             }
             else {
@@ -70,12 +68,11 @@ module.exports = function(app, config) {
         return filteredGameRecords;
     };
 
-    app.use(paginate.middleware(10, 50));
 
     app.get("/api/games", function (req, res, next) {
 
         var generateHighScoreStatsQuery = function(variant, username, result) {
-            
+
             var queryObj = {}
 
             if (username) {
@@ -108,13 +105,13 @@ module.exports = function(app, config) {
         }
 
         GameRecord.paginate(query, {
-            page: sanitize(req.query.page),
-            limit: sanitize(req.query.limit),
+            page: req.pagination.page,
+            limit: req.pagination.limit,
             sort: sortFromQueryParams(req, { date: -1 })
         }, function (err, gameRecords) {
 
             if (err) return next(err);
-            
+
             res.format({
                 json: function () {
 
@@ -139,13 +136,13 @@ module.exports = function(app, config) {
             const splitVariants = sanitizedQuery.split(',');
             filterVariants = splitVariants.map(item => item.trim());
         }
- 
-        var aggregateQuery = 
-            [ 
-              { 
+
+        var aggregateQuery =
+            [
+              {
               $match: { easyMode: { $ne: true },
                           variant: [],
-                          result: { $in: [brogueConstants.notifyEvents.GAMEOVER_SUPERVICTORY, brogueConstants.notifyEvents.GAMEOVER_VICTORY] } } 
+                          result: { $in: [brogueConstants.notifyEvents.GAMEOVER_SUPERVICTORY, brogueConstants.notifyEvents.GAMEOVER_VICTORY] } }
               },
               {
                 $sort: { date: -1 }
@@ -174,18 +171,16 @@ module.exports = function(app, config) {
         else {
             delete aggregateQuery[0].$match.variant;
         }
-        
+
         res.format({
             json: function () {
 
-                GameRecord.aggregate(aggregateQuery).exec(function (err, games) {
-
-                    if (err) return next(err);
-
+                GameRecord.aggregate(aggregateQuery).exec().then(function (games) {
                     const gameRecordList = games.reduce((result, { record }) => result.concat(record), []);
                     var gameRecordsFiltered = filterGameRecords(gameRecordList);
-
                     res.json(gameRecordsFiltered);
+                }).catch(function (err) {
+                    return next(err);
                 });
             }
         });
@@ -214,8 +209,8 @@ module.exports = function(app, config) {
 
         GameRecord.paginate(
             query,
-            {   page: sanitize(req.query.page),
-                limit: sanitize(req.query.limit),
+            {   page: req.pagination.page,
+                limit: req.pagination.limit,
                 sort: sortFromQueryParams(req, { score: -1 })
         }, function (err, gameRecords) {
 
@@ -259,8 +254,8 @@ module.exports = function(app, config) {
         }
 
         GameRecord.paginate(query, {
-            page: sanitize(req.query.page),
-            limit: sanitize(req.query.limit),
+            page: req.pagination.page,
+            limit: req.pagination.limit,
             sort: sortFromQueryParams(req, { date: -1 })
         }, function (err, gameRecords) {
 
@@ -284,8 +279,8 @@ module.exports = function(app, config) {
     app.get("/api/games/id/:id", function (req, res, next) {
 
         GameRecord.paginate({_id: sanitize(req.params.id)}, {
-            page: sanitize(req.query.page),
-            limit: sanitize(req.query.limit),
+            page: req.pagination.page,
+            limit: req.pagination.limit,
             sort: sortFromQueryParams(req, { date: -1 })
         }, function (err, gameRecords) {
 

@@ -6,7 +6,7 @@ var expect = require("chai").expect;
 var server = require("./server-test");
 var config = require("./config-test");
 
-var db = mongoose.createConnection(config.db.url);
+
 
 describe("stats/general", function(){
 
@@ -64,20 +64,24 @@ describe("stats/general", function(){
             variant: "BROGUE"
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4], function() {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("returns status 200", function(done) {
-      request(server)
+      request(server.app)
           .get("/api/stats/general")
           .set('Accept', 'application/json')
           .expect('Content-Type', /json/)
@@ -85,7 +89,7 @@ describe("stats/general", function(){
     });
 
     it("totalGames is calculated correctly over all variants", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .end(function(err, res) {
@@ -96,13 +100,13 @@ describe("stats/general", function(){
     });
 
     it("last victory is calculated from victories over all variants", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .end(function(err, res) {
                 var bodyObj = JSON.parse(res.text);
-                expect(bodyObj).to.have.deep.property('lastVictory.date', "2013-06-27T07:56:01.123Z");
-                expect(bodyObj).to.have.deep.property('lastVictory.username', "ccc");
+                expect(bodyObj).to.have.nested.property('lastVictory.date', "2013-06-27T07:56:01.123Z");
+                expect(bodyObj).to.have.nested.property('lastVictory.username', "ccc");
                 done();
             });
     });
@@ -164,20 +168,24 @@ describe("stats/general filters by variant", function() {
             variant: "GBROGUE"
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4], function () {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function (done) {
 
-        gameRecord.remove({}, function () {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("totalGames is calculated correctly when filtering by variant", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .query({ variant: 'BROGUE' })
@@ -245,20 +253,24 @@ describe("stats/general filters by variant and user", function() {
             variant: "GBROGUE"
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4], function () {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function (done) {
 
-        gameRecord.remove({}, function () {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("totalGames is calculated correctly when filtering by user and variant with user having played 1 variant", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .query({ variant: 'BROGUE', username: 'ccc' })
@@ -270,7 +282,7 @@ describe("stats/general filters by variant and user", function() {
     });
 
     it("totalGames is calculated correctly when filtering by user and variant with user having played >1 variant", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .query({ variant: 'BROGUE', username: 'flend' })
@@ -338,20 +350,24 @@ describe("stats/general calculates total lumenstones correctly", function() {
             variant: "GBROGUE"
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4], function () {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function (done) {
 
-        gameRecord.remove({}, function () {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("totalLumenstones is calculated correctly for numeric lumenstones", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .query({ variant: 'BROGUE' })
@@ -363,7 +379,7 @@ describe("stats/general calculates total lumenstones correctly", function() {
     });
 
     it("totalLumenstones is calculated correctly for 'a lumenstone'", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .query({ variant: 'GBROGUE' })
@@ -375,7 +391,7 @@ describe("stats/general calculates total lumenstones correctly", function() {
     });
 
     it("totalLumenstones is calculated correctly sum of both numeric and 'a lumenstone'", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .end(function (err, res) {
@@ -416,7 +432,7 @@ describe("stats/general", function(){
             recording: "file4",
             variant: "BROGUE"
         };
-        
+
         var gameRecord3 = {
             username: "yyy",
             date: new Date("2011-05-27T07:56:00.123Z"),
@@ -456,7 +472,7 @@ describe("stats/general", function(){
             variant: "BROGUE"
         };
 
-       
+
         var gameRecord8 = {
             username: "xxx",
             date: new Date("2010-05-25T07:56:00.123Z"),
@@ -510,52 +526,56 @@ describe("stats/general", function(){
         };
 
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5, gameRecord6, gameRecord7, gameRecord8, gameRecord9], function() {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5, gameRecord6, gameRecord7, gameRecord8, gameRecord9]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("last victory is calculated from victories and supervictories", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .end(function(err, res) {
                 var bodyObj = JSON.parse(res.text);
-                expect(bodyObj).to.have.deep.property('lastVictory.date', "2012-06-26T07:56:00.123Z");
-                expect(bodyObj).to.have.deep.property('lastVictory.username', "xxx");
+                expect(bodyObj).to.have.nested.property('lastVictory.date', "2012-06-26T07:56:00.123Z");
+                expect(bodyObj).to.have.nested.property('lastVictory.username', "xxx");
                 done();
             });
     });
 
     it("last streak is the most recent, longest set of consecutive victories and supervictories", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .end(function(err, res) {
                 var bodyObj = JSON.parse(res.text);
-                expect(bodyObj).to.have.deep.property('lastStreak.date', "2011-06-29T07:56:00.123Z");
-                expect(bodyObj).to.have.deep.property('lastStreak.length', 3);
-                expect(bodyObj).to.have.deep.property('lastStreak.username', "yyy");
+                expect(bodyObj).to.have.nested.property('lastStreak.date', "2011-06-29T07:56:00.123Z");
+                expect(bodyObj).to.have.nested.property('lastStreak.length', 3);
+                expect(bodyObj).to.have.nested.property('lastStreak.username', "yyy");
                 done();
             });
     });
 
     it("identifies mastery streaks, longest set of consecutive supervictories only", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .end(function(err, res) {
                 var bodyObj = JSON.parse(res.text);
-                expect(bodyObj).to.have.deep.property('lastMasteryStreak.date', "2011-06-28T07:56:00.123Z");
-                expect(bodyObj).to.have.deep.property('lastMasteryStreak.length', 2);
-                expect(bodyObj).to.have.deep.property('lastMasteryStreak.username', "yyy");
+                expect(bodyObj).to.have.nested.property('lastMasteryStreak.date', "2011-06-28T07:56:00.123Z");
+                expect(bodyObj).to.have.nested.property('lastMasteryStreak.length', 2);
+                expect(bodyObj).to.have.nested.property('lastMasteryStreak.username', "yyy");
                 done();
             });
     });
@@ -591,27 +611,31 @@ describe("stats/general", function(){
             variant: "BROGUE"
         };
 
-        gameRecord.create([gameRecord1], function() {
+        gameRecord.create([gameRecord1]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("last streak is 1 if there is only 1 consecutive victory", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .end(function(err, res) {
                 var bodyObj = JSON.parse(res.text);
-                expect(bodyObj).to.have.deep.property('lastStreak.date', "2012-06-26T07:56:00.123Z");
-                expect(bodyObj).to.have.deep.property('lastStreak.length', 1);
-                expect(bodyObj).to.have.deep.property('lastStreak.username', "xxx");
+                expect(bodyObj).to.have.nested.property('lastStreak.date', "2012-06-26T07:56:00.123Z");
+                expect(bodyObj).to.have.nested.property('lastStreak.length', 1);
+                expect(bodyObj).to.have.nested.property('lastStreak.username', "xxx");
                 done();
             });
     });
@@ -620,26 +644,26 @@ describe("stats/general", function(){
 describe("stats/general", function(){
 
     it("last victory is 'Never' if no games recorded", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .end(function(err, res) {
                 var bodyObj = JSON.parse(res.text);
-                expect(bodyObj).to.have.deep.property('lastVictory.date', 'Never');
-                expect(bodyObj).to.have.deep.property('lastVictory.username', 'No-one');
+                expect(bodyObj).to.have.nested.property('lastVictory.date', 'Never');
+                expect(bodyObj).to.have.nested.property('lastVictory.username', 'No-one');
                 done();
             });
     });
 
     it("longest streak is 'Never' if no games recorded", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .end(function(err, res) {
                 var bodyObj = JSON.parse(res.text);
-                expect(bodyObj).to.have.deep.property('lastStreak.date', "Never");
-                expect(bodyObj).to.have.deep.property('lastStreak.length', 0);
-                expect(bodyObj).to.have.deep.property('lastStreak.username', "No-one");
+                expect(bodyObj).to.have.nested.property('lastStreak.date', "Never");
+                expect(bodyObj).to.have.nested.property('lastStreak.length', 0);
+                expect(bodyObj).to.have.nested.property('lastStreak.username', "No-one");
                 done();
             });
     });
@@ -675,39 +699,43 @@ describe("stats/general", function(){
             variant: "BROGUE"
         };
 
-        gameRecord.create([gameRecord1], function() {
+        gameRecord.create([gameRecord1]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        gameRecord.remove({}, function() {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("last victory is 'Never' if no victories recorded", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .end(function(err, res) {
                 var bodyObj = JSON.parse(res.text);
-                expect(bodyObj).to.have.deep.property('lastVictory.date', 'Never');
-                expect(bodyObj).to.have.deep.property('lastVictory.username', 'No-one');
+                expect(bodyObj).to.have.nested.property('lastVictory.date', 'Never');
+                expect(bodyObj).to.have.nested.property('lastVictory.username', 'No-one');
                 done();
             });
     });
 
     it("longest streak is 'Never' if there are no victories", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/general")
             .set('Accept', 'application/json')
             .end(function(err, res) {
                 var bodyObj = JSON.parse(res.text);
-                expect(bodyObj).to.have.deep.property('lastStreak.date', "Never");
-                expect(bodyObj).to.have.deep.property('lastStreak.length', 0);
-                expect(bodyObj).to.have.deep.property('lastStreak.username', "No-one");
+                expect(bodyObj).to.have.nested.property('lastStreak.date', "Never");
+                expect(bodyObj).to.have.nested.property('lastStreak.length', 0);
+                expect(bodyObj).to.have.nested.property('lastStreak.username', "No-one");
                 done();
             });
     });
@@ -783,21 +811,25 @@ describe("stats/levels/monsters", function() {
             variant: "BROGUE"
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5], function () {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function (done) {
 
         //delete all the customer records
-        gameRecord.remove({}, function () {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("returns status 200", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/levels/monsters")
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
@@ -805,7 +837,7 @@ describe("stats/levels/monsters", function() {
     });
 
     it("groups causes by deaths correctly", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/levels/monsters")
             .set('Accept', 'application/json')
             .end(function (err, res) {
@@ -827,7 +859,7 @@ describe("stats/levels/monsters", function() {
     });
 
     it("restricts records per level by maxCauses", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/levels/monsters?maxCauses=1")
             .set('Accept', 'application/json')
             .end(function (err, res) {
@@ -849,7 +881,7 @@ describe("stats/levels/monsters", function() {
     });
 
     it("calculates percentages of all deaths", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/levels/monsters?maxCauses=2")
             .set('Accept', 'application/json')
             .end(function (err, res) {
@@ -883,7 +915,7 @@ describe("stats/levels/monsters", function() {
 describe("stats/levels/monsters with no game records", function() {
 
     it("returns an empty object", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/levels/monsters")
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
@@ -1039,21 +1071,25 @@ describe("stats/levelProbabilities", function() {
             variant: "BROGUE"
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5, gameRecord6, gameRecord7, gameRecord8, gameRecord9, gameRecord10, gameRecord11], function () {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5, gameRecord6, gameRecord7, gameRecord8, gameRecord9, gameRecord10, gameRecord11]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function (done) {
 
         //delete all the customer records
-        gameRecord.remove({}, function () {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("returns status 200", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/levelProbability")
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
@@ -1061,7 +1097,7 @@ describe("stats/levelProbabilities", function() {
     });
 
     it("calculates conditional probabilities", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/levelProbability")
             .set('Accept', 'application/json')
             .end(function (err, res) {
@@ -1091,7 +1127,7 @@ describe("stats/levelProbabilities", function() {
 describe("stats/levelProbabilities with no game records", function() {
 
     it("returns an empty object", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/levelProbability")
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
@@ -1208,21 +1244,25 @@ describe("stats/levels", function() {
             variant: "BROGUE"
         };
 
-        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5, gameRecord6, gameRecord7, gameRecord8], function () {
+        gameRecord.create([gameRecord1, gameRecord2, gameRecord3, gameRecord4, gameRecord5, gameRecord6, gameRecord7, gameRecord8]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function (done) {
 
         //delete all the customer records
-        gameRecord.remove({}, function () {
+        gameRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("returns status 200", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/levels")
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
@@ -1230,7 +1270,7 @@ describe("stats/levels", function() {
     });
 
     it("groups deaths by level", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/levels")
             .set('Accept', 'application/json')
             .end(function (err, res) {
@@ -1260,7 +1300,7 @@ describe("stats/levels", function() {
 describe("stats/levels with no game records", function() {
 
     it("returns an empty object", function (done) {
-        request(server)
+        request(server.app)
             .get("/api/stats/levels")
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)

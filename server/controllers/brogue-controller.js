@@ -12,7 +12,6 @@ var brogueComms = require('../brogue/brogue-comms');
 var gameRecord = require('../database/game-record-model');
 var brogueConstants = require('../brogue/brogue-constants.js');
 var brogueStatus = require('../enum/brogue-status-types');
-var Integer = require('integer');
 
 var KEYPRESS_EVENT_CHAR = 0;
 
@@ -126,16 +125,14 @@ _.extend(BrogueController.prototype, {
             };
 
             //Create save game record
-            gameRecord.create(thisGameRecord, function (err) {
-                if (err) {
-                    if(!(err.code && err.code == 11000)) {
-                        self.controllers.error.send(JSON.stringify(err));
-                        console.log(JSON.stringify(err));
-                        //Ignore duplicate record fail (occurs when 2 windows logged into the same game)
-                    }
+            gameRecord.create(thisGameRecord).catch(function (err) {
+                if(!(err.code && err.code == 11000)) {
+                    self.controllers.error.send(JSON.stringify(err));
                     console.log(JSON.stringify(err));
-                    return;
+                    //Ignore duplicate record fail (occurs when 2 windows logged into the same game)
                 }
+                console.log(JSON.stringify(err));
+                return;
             });
 
         }
@@ -178,11 +175,11 @@ _.extend(BrogueController.prototype, {
         var cmds = [];
 
         for(var i = 0; i < turnNumber.length; i++) {
-            var messageArray = new Buffer.alloc(5);
+            var messageArray = Buffer.alloc(5);
             var thisChar = turnNumber.charCodeAt(i);
             var keyCodePart1 = (thisChar & '0xffff') >> 8;
             var keyCodePart2 = (thisChar & '0xff');
-            
+
             messageArray[0] = KEYPRESS_EVENT_CHAR;
             messageArray[1] = keyCodePart1;
             messageArray[2] = keyCodePart2;
@@ -190,7 +187,7 @@ _.extend(BrogueController.prototype, {
         }
 
         //ENTER
-        messageArray = new Buffer.alloc(5);
+        messageArray = Buffer.alloc(5);
         messageArray[0] = KEYPRESS_EVENT_CHAR;
         messageArray[1] = 0;
         messageArray[2] = 13;
@@ -225,12 +222,7 @@ _.extend(BrogueController.prototype, {
 
         var self = this;
 
-        gameRecord.findOne({'_id': id}, function (err, gameRecord) {
-            if (err) {
-                self.controllers.error.send(JSON.stringify(err));
-                console.error("Error on retrieving game record " + JSON.stringify(err));
-                return;
-            }
+        gameRecord.findOne({'_id': id}).then(function (gameRecord) {
             if (gameRecord) {
 
                 try {
@@ -263,6 +255,10 @@ _.extend(BrogueController.prototype, {
                 console.error("Can't process recording id " + data.recording);
                 return;
             }
+        }).catch(function (err) {
+            self.controllers.error.send(JSON.stringify(err));
+            console.error("Error on retrieving game record " + JSON.stringify(err));
+            return;
         });
     },
 
@@ -316,9 +312,12 @@ _.extend(BrogueController.prototype, {
 
                 //Check seed and abort on error
                 if (data && data.seed) {
-                    var seed = Integer.fromString(data.seed);
+                    if (typeof data.seed !== 'string' || !/^\d+$/.test(data.seed)) {
+                        throw new RangeError('Seed must be a positive decimal integer');
+                    }
+                    var seed = BigInt(data.seed);
 
-                    if (seed.lessThan(1) || seed.greaterThan(this.maxSeedForVariant(data.variant))) {
+                    if (seed < 1n || seed > this.maxSeedForVariant(data.variant)) {
                         this.sendMessage("seed", {
                             result: "fail",
                             data: this.maxSeedForVariantFailureMessage(data.variant)
@@ -490,9 +489,9 @@ _.extend(BrogueController.prototype, {
 
             this.returnToLobby();
         },
-        
+
         clean: function (data) {
-            
+
             // Called on logout or websocket close
 
             if(this.mode == brogueMode.GAME) {
@@ -507,7 +506,7 @@ _.extend(BrogueController.prototype, {
             this.stopInteractingWithCurrentGame();
         }
     },
-    
+
     setState : function(state) {
 
         currentGames.setState(this.brogueCurrentGamesId, state);

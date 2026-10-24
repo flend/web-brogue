@@ -4,13 +4,13 @@ var GameRecord = require("../../server/database/game-record-model");
 var _ = require("../../server/node_modules/underscore/underscore");
 
 var mongoose = require("../../server/node_modules/mongoose");
-mongoose.connect(config.db.url);
+
 
 var calculateLevelStats = function () {
 
     console.log("Calculating level stats");
 
-    GameRecord.find({}).lean().exec(function (err, games) {
+    return GameRecord.find({}).lean().exec().then(function (games) {
 
         var monsterDeathGames = _.filter(games, function (game) {
             return game.description && game.description.search("Killed") != -1;
@@ -129,4 +129,10 @@ var calculateLevelStats = function () {
     });
 };
 
-calculateLevelStats();
+mongoose.connect(config.db.url, { serverSelectionTimeoutMS: 10000 })
+    .then(calculateLevelStats)
+    .catch(function(err) {
+        console.error(err);
+        process.exitCode = 1;
+    })
+    .finally(function() { return mongoose.disconnect(); });

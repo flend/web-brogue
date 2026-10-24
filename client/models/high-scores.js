@@ -4,7 +4,8 @@ define([
     'jquery',
     'underscore',
     'backbone',
-    'services/scores-api-parser'
+    'services/scores-api-parser',
+    'backbonePaginator'
 ], function($, _, Backbone, ScoresParser) {
 
     var HighScores = Backbone.PageableCollection.extend({

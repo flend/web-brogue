@@ -59,30 +59,24 @@ _.extend(ChatController.prototype, {
             var self = this;
 
             //Delete very old chats if above threshold
-            chatRecord.count({}, function(err, count) {
-
+            chatRecord.countDocuments({}).then(function (count) {
                 if (count > CHAT_HISTORY_LENGTH * 2) {
-                    chatRecord.find({}).sort('-date').skip(CHAT_HISTORY_LENGTH).exec(function (err, chatRecords) {
-
-                        if (err) {
-                            return;
-                        }
+                    chatRecord.find({}).sort('-date').skip(CHAT_HISTORY_LENGTH).exec().then(function (chatRecords) {
                         if (chatRecords) {
-                            _.each(chatRecords, function (chatRecord) {
-                                chatRecord.remove()
+                            return chatRecord.deleteMany({
+                                _id: { $in: chatRecords.map(record => record._id) }
                             });
                         }
+                    }).catch(function (err) {
+                        return;
                     });
                 }
+            }).catch(function (err) {
+                console.error(err);
             });
 
             //Send chat history
-            chatRecord.find({}).sort('-date').limit(CHAT_HISTORY_LENGTH).exec(function (err, chatRecords) {
-                if (err) {
-                    self.controllers.error.send(JSON.stringify(err));
-                    return;
-                }
-
+            chatRecord.find({}).sort('-date').limit(CHAT_HISTORY_LENGTH).exec().then(function (chatRecords) {
                 if (chatRecords) {
                     var chatsToSend = _.map(chatRecords, function(chatRecord) { return _.pick(chatRecord, "date", "username", "message"); });
                     var chatsToSendSanitised = _.map(chatsToSend,
@@ -100,6 +94,9 @@ _.extend(ChatController.prototype, {
                         history: chatsToSendOrdered
                     });
                 }
+            }).catch(function (err) {
+                self.controllers.error.send(JSON.stringify(err));
+                return;
             });
         }
     },
@@ -109,10 +106,8 @@ _.extend(ChatController.prototype, {
             message: chatMessage.message
         };
 
-        chatRecord.create(thisChatRecord, function (err) {
-            if(err) {
-                console.error("Chat save failure:" + err);
-            }
+        chatRecord.create(thisChatRecord).catch(function (err) {
+            console.error("Chat save failure:" + err);
         });
     },
     enterRoom: function(roomName) {

@@ -1,0 +1,11 @@
+# Local development only. Production deployments should configure MongoDB authentication.
+services:
+  mongo:
+    image: mongo:8.0
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+volumes:
+  mongo-data:

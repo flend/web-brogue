@@ -14,9 +14,10 @@
   },
   "main": "news.js",
   "dependencies": {
-    "async": "1.0.0",
-    "minimist": "^1.2.5",
-    "mongoose": "^6.1.2",
-    "underscore": "^1.8.2"
+    "minimist": "^1.2.8",
+    "mongoose": "^9.11.4"
+  },
+  "engines": {
+    "node": ">=24.15 <25"
   }
 }

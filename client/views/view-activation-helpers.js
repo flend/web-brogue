@@ -39,7 +39,7 @@ define([
         console : function(){
             $('#lobby').addClass("inactive");
             $("#console-holder").removeClass("inactive");
-            $("#console").focus();
+            $("#console").trigger('focus');
         },
         
         lobby: function(){

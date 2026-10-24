@@ -37,7 +37,7 @@ function BrogueInterface(username, variant) {
     this.username = username;
     this.variant = variant;
     this.childDir = null;
-    this.dataRemainder = new Buffer.alloc(0);
+    this.dataRemainder = Buffer.alloc(0);
     this.brogueEvents = new events.EventEmitter();
 
     this.disconnected = false;
@@ -85,7 +85,7 @@ BrogueInterface.prototype.removeEventListener = function(listener) {
 
 BrogueInterface.prototype.sendRefreshScreenAndInitialiseCommands = function(initialiseCommands, callback) {
 
-    var messageArray = new Buffer.alloc(5);
+    var messageArray = Buffer.alloc(5);
     messageArray[0] = SCREEN_REFRESH;
     this.sendToBrogue(messageArray, callback);
 
@@ -162,7 +162,7 @@ BrogueInterface.prototype.start = function (data, mode) {
 
     this.childDir = this.createBrogueDirectoryIfRequired(mode);
 
-    var sendBuf = new Buffer.alloc(5);
+    var sendBuf = Buffer.alloc(5);
     sendBuf[0] = SCREEN_REFRESH;
 
     this.brogueSocket = unixdgram.createSocket('unix_dgram');
@@ -297,8 +297,8 @@ BrogueInterface.prototype.attachChildEvents = function () {
         //console.log("d: " + data.length);
 
         //fill the data buffer with the remainder from last time and the new data
-        self.dataAccumulator = new Buffer.alloc(data.length + remainderLength);
-        self.dataToSend = new Buffer.alloc(data.length + remainderLength);
+        self.dataAccumulator = Buffer.alloc(data.length + remainderLength);
+        self.dataToSend = Buffer.alloc(data.length + remainderLength);
         self.dataRemainder.copy(self.dataAccumulator);
         data.copy(self.dataAccumulator, remainderLength, 0);
         var fullDataLength = self.dataAccumulator.length;
@@ -563,7 +563,7 @@ BrogueInterface.prototype.attachChildEvents = function () {
         //Save the remaining data for next time
         //console.log("i: " + i);
         //console.log("f: " + fullDataLength);
-        self.dataRemainder = new Buffer.alloc(fullDataLength - i);
+        self.dataRemainder = Buffer.alloc(fullDataLength - i);
         self.dataAccumulator.copy(self.dataRemainder, 0, i, fullDataLength);
         var dataToSendCropped = self.dataToSend.slice(0, dataToSendPos);
         //console.log("r: " + self.dataRemainder.length);
@@ -675,7 +675,7 @@ BrogueInterface.prototype.createBrogueDirectoryIfRequired = function(mode) {
     var path = this.brogueGameDirectoryPath(this.username, this.variant, mode);
 
     try {
-        fs.accessSync(path, fs.F_OK);
+        fs.accessSync(path, fs.constants.F_OK);
         return path;
     }
     catch(err) {

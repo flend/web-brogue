@@ -12,7 +12,11 @@
     module.exports = factory(require("underscore"),
                              require("backbone"),
                              require("backgrid"),
-                             require("backbone-pageable"));
+                             require("backbone.paginator"));
+  }
+  // AMD. Register as an anonymous module.
+  else if (typeof define == "function" && define.amd) {
+    define(["underscore", "backbone", "backgrid", "backbone.paginator"], factory);
   }
   // Browser
   else {
@@ -34,11 +38,10 @@
      always be inferred from the `is*` flag. Only one of the `is*` flags should
      be set to `true` at a time. For example, an instance of this class cannot
      simultaneously be a rewind control and a fast forward control. A `label`
-     and a `title` template or a string are required to be passed to the
-     constuctor under this mode. If a `title` template is provided, it __MUST__
-     accept a parameter `label`. When the `label` is provided to the `title`
-     template function, its result will be used to render the generated anchor's
-     title attribute.
+     and a `title` function or a string are required to be passed to the
+     constuctor under this mode. If a `title` function is provided, it __MUST__
+     accept a hash parameter `data`, which contains a key `label`. Its result
+     will be used to render the generated anchor's title attribute.
 
      If all of the `is*` flags is set to `false`, which is the default, an
      instance of this class will be in discrete page handle mode. An instance
@@ -50,8 +53,8 @@
      index calculated from `pageIndex` and the underlying PageableCollection
      instance. A provided `label` will still be honored however. The `title`
      parameter is also not required under this mode, in which case the default
-     `title` template will be used. You are encouraged to provide your own
-     `title` template however if you wish to localize the title strings.
+     `title` function will be used. You are encouraged to provide your own
+     `title` function however if you wish to localize the title strings.
 
      If this page handle represents the current page, an `active` class will be
      placed on the root list element.
@@ -77,10 +80,13 @@
     /**
        @property {string|function(Object.<string, string>): string} title
        The title to use for the `title` attribute of the generated page handle
-       anchor elements. It can be a string or an Underscore template function
-       that takes a mandatory `label` parameter.
+       anchor elements. It can be a string or a function that takes a `data`
+       parameter, which contains a mandatory `label` key which provides the
+       label value to be displayed.
     */
-    title: _.template('Page <%- label %>', null, {variable: null}),
+    title: function (data) {
+      return 'Page ' + data.label;
+    },
 
     /**
        @property {boolean} isRewind Whether this handle represents a rewind
@@ -191,10 +197,10 @@
       e.preventDefault();
       var $el = this.$el, col = this.collection;
       if (!$el.hasClass("active") && !$el.hasClass("disabled")) {
-        if (this.isRewind) col.getFirstPage();
-        else if (this.isBack) col.getPreviousPage();
-        else if (this.isForward) col.getNextPage();
-        else if (this.isFastForward) col.getLastPage();
+        if (this.isRewind) col.getFirstPage({reset: true});
+        else if (this.isBack) col.getPreviousPage({reset: true});
+        else if (this.isForward) col.getNextPage({reset: true});
+        else if (this.isFastForward) col.getLastPage({reset: true});
         else col.getPage(this.pageIndex, {reset: true});
       }
       return this;
@@ -263,6 +269,13 @@
     renderIndexedPageHandles: true,
 
     /**
+      @property renderMultiplePagesOnly. Determines if the paginator
+      should show in cases where the collection has more than one page.
+      Default is false for backwards compatibility.
+    */
+    renderMultiplePagesOnly: false,
+
+    /**
        @property {Backgrid.Extension.PageHandle} pageHandle. The PageHandle
        class to use for rendering individual handles
     */
@@ -279,6 +292,7 @@
        @param {boolean} [options.controls]
        @param {boolean} [options.pageHandle=Backgrid.Extension.PageHandle]
        @param {boolean} [options.goBackFirstOnSort=true]
+       @param {boolean} [options.renderMultiplePagesOnly=false]
     */
     initialize: function (options) {
       var self = this;
@@ -287,14 +301,15 @@
 
       _.extend(self, _.pick(options || {}, "windowSize", "pageHandle",
                             "slideScale", "goBackFirstOnSort",
-                            "renderIndexedPageHandles"));
+                            "renderIndexedPageHandles",
+                            "renderMultiplePagesOnly"));
 
       var col = self.collection;
       self.listenTo(col, "add", self.render);
       self.listenTo(col, "remove", self.render);
       self.listenTo(col, "reset", self.render);
       self.listenTo(col, "backgrid:sorted", function () {
-        if (self.goBackFirstOnSort) col.getFirstPage({reset: true});
+        if (self.goBackFirstOnSort && col.state.currentPage !== col.state.firstPage) col.getFirstPage({reset: true});
       });
     },
 
@@ -403,6 +418,13 @@
     */
     render: function () {
       this.$el.empty();
+
+      var totalPages = this.collection.state.totalPages;
+
+      // Don't render if collection is empty
+      if(this.renderMultiplePagesOnly && totalPages <= 1) {
+        return this;
+      }
 
       if (this.handles) {
         for (var i = 0, l = this.handles.length; i < l; i++) {

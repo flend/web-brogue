@@ -7,10 +7,31 @@ Build Instructions
 -----------------------
 
 ### Step 1: Get Dependencies ###
-Get the latest stable version of node.js and mongoDB. (Or whatever mongoDB comes with your distro which should be fine.)
+Use **Node.js 24 LTS** and **MongoDB 8.0** (latest patch releases).
+The repository's `.nvmrc` selects Node 24:
+
+```sh
+nvm install
+nvm use
+```
+
+Install a C++ compiler, `make`, and Python 3 for the `unix-dgram` native module
+(on Ubuntu: `sudo apt-get install build-essential python3`).
+For local MongoDB, install MongoDB 8.0 or run `docker compose up -d mongo`.
+The Compose database is bound to localhost and persists in a named volume.
+Alternatively, after installing server dependencies, run `npm run db` in `server`.
+This downloads MongoDB 8.0.34 if needed, listens on localhost:27017, and persists
+its data in the ignored `server/db/` directory. Leave it running in a separate
+terminal; Ctrl+C stops the database without deleting its data. This development
+command requires dev dependencies; production uses a separately managed MongoDB.
 
 ### Step 2: Get node packages
-Navigate to the `server` directory and run `npm install` to get the node dependencies. You'll need a C++ compiler to compile the datagrams module.
+Navigate to the `server` directory and run `npm ci`. Lockfiles are committed
+for reproducible installs. Also run `npm ci` in `scripts/news` if you use the news utility.
+
+Browser libraries are committed in `client/libs`. To regenerate them from the
+client lockfile, run `npm ci && npm run build` inside `client`.
+The custom autocomplete view and the small paginator adapter are local application code.
 
 ### Step 3: Build Brogue Executables ##
 The paths to the binaries is stored in `server/config.js`.
@@ -46,6 +67,9 @@ Note that you might need root access if you are running on a privileged port (e.
 Configuration
 --------------------------------
 Server global configuration variables are defined in `server/config.js`.
+`MONGODB_URI` overrides the default `mongodb://127.0.0.1:27017/brogue`;
+`PORT` overrides HTTP port 8080; `SESSION_SECRET` overrides the configured token secret.
+Keep your existing session secret during migration to preserve saved login tokens.
 Client configuration variables are defined in `client/config.js`.
 
 In particular, make sure to get the client and server to agree on the websocketPort.
@@ -59,4 +83,19 @@ A good command is `killall --older-than 1M -r ".*brogue.*"` which kills all brog
 
 Tests
 ----------------------------
-An API test suite can be run using `npm test` in the `server` directory.
+Run `npm test` in `server`. By default it starts a temporary MongoDB 8.0.34
+process and removes it afterward. The first run downloads the MongoDB binary;
+subsequent runs reuse the cached binary. No running database service is needed.
+The suite covers APIs, legacy bcrypt password hashes, new registration,
+Socket.IO 4 login/token/chat flows, 64-bit seed output, native Unix datagram
+communication, and client initialization in a DOM environment. Full browser
+canvas rendering and interactive gameplay still need a real-browser check.
+
+To use an existing disposable test database, set `TEST_MONGODB_URI`.
+Its database name must end in `_test`; tests delete their fixtures.
+
+Database migration
+----------------------------
+See [the migration notes](doc/database-migration.md). The legacy dump's format and
+source MongoDB version must be established before choosing and rehearsing the
+import procedure. The code upgrade does not migrate a production database.

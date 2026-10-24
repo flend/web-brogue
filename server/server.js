@@ -1,15 +1,16 @@
-// Main entry point in server side code.  Sets up http server and websocket server and routes
-var domain = require("domain");
-var config = require("./config");
-var util = require("util");
+const config = require('./config');
 
-httpServerDomain = domain.create();
-httpServerDomain.on("error", function (err) {
-    util.log("Uncaught exception emitted internally from Http Server. Process Terminating.");
-    console.log(err.stack);
+require('./httpServer')(config).then(app => {
+    console.log('Server listening on port ' + app.httpServer.address().port);
+    for (const signal of ['SIGINT', 'SIGTERM']) {
+        process.once(signal, () => {
+            app.close().then(() => process.exit(0)).catch(error => {
+                console.error(error);
+                process.exit(1);
+            });
+        });
+    }
+}).catch(error => {
+    console.error('Server startup failed:', error);
     process.exit(1);
-});
-
-httpServerDomain.run(function () {
-    require("./httpServer")(config);
 });

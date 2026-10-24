@@ -1,4 +1,2 @@
-var config = require("./config-test");
-var httpServer = require("../httpServer")(config);
-
-module.exports = httpServer;
+// Populated by the root test hook after the isolated database starts.
+module.exports = { app: null };

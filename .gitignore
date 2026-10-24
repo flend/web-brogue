@@ -3,8 +3,13 @@
 /nbproject
 
 ## Node.js
+/client/node_modules
 /server/node_modules
+/scripts/news/node_modules
 /server/db
+/brogue-bson*.tar.gz
+/brogue-json-*.tar.gz
+/migration-data/
 *.log
 
 # C things

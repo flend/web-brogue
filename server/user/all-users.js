@@ -100,7 +100,7 @@ module.exports = {
     },
 
     startIdleTicker: function () {
-        setInterval(this.tickIdleUsers.bind(this), IDLE_TICKER_INTERVAL_MS);
+        setInterval(this.tickIdleUsers.bind(this), IDLE_TICKER_INTERVAL_MS).unref();
     }
 };
 

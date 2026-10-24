@@ -50,7 +50,7 @@ define([
 
         showSeedPopup: function(variantCode) {
             this.showPopup("");
-            $('#seed').focus();
+            $('#seed').trigger('focus');
             this.variantCode = variantCode;
             return;
         },

@@ -1,9 +1,11 @@
 /*
-  backbone.paginator 2.0.0
+  backbone.paginator
   http://github.com/backbone-paginator/backbone.paginator
 
-  Copyright (c) 2013 Jimmy Yuen Ho Wong and contributors
-  Licensed under the MIT @license.
+  Copyright (c) 2016 Jimmy Yuen Ho Wong and contributors
+
+  @module
+  @license MIT
 */
 
 (function (factory) {
@@ -26,18 +28,16 @@
 
        If you already have an object named `PageableCollection` attached to the
        `Backbone` module, you can use this to return a local reference to this
-       Backbone.PageableCollection class and reset the name
-       Backbone.PageableCollection to its previous definition.
+       PageableCollection class and reset the name PageableCollection to its
+       previous definition.
 
            // The left hand side gives you a reference to this
-           // Backbone.PageableCollection implementation, the right hand side
-           // resets Backbone.PageableCollection to your other
-           // Backbone.PageableCollection.
-           var PageableCollection = Backbone.PageableCollection.noConflict();
+           // PageableCollection implementation, the right hand side
+           // resets PageableCollection to your other PageableCollection.
+           var PageableCollection = PageableCollection.noConflict();
 
        @static
-       @member Backbone.PageableCollection
-       @return {Backbone.PageableCollection}
+       @return {PageableCollection}
     */
     Backbone.PageableCollection.noConflict = function () {
       Backbone.PageableCollection = oldPageableCollection;
@@ -54,9 +54,9 @@
   var _clone = _.clone;
   var _each = _.each;
   var _pick = _.pick;
-  var _contains = _.contains;
+  var _contains = _.includes;
   var _isEmpty = _.isEmpty;
-  var _pairs = _.pairs;
+  var _pairs = _.pairs || _.toPairs;
   var _invert = _.invert;
   var _isArray = _.isArray;
   var _isFunction = _.isFunction;
@@ -78,10 +78,11 @@
 
   function queryStringToParams (qs) {
     var kvp, k, v, ls, params = {}, decode = decodeURIComponent;
-    var kvps = qs.split('&');
+    var kvps = qs.split("&");
     for (var i = 0, l = kvps.length; i < l; i++) {
       var param = kvps[i];
-      kvp = param.split('='), k = kvp[0], v = kvp[1] || true;
+      kvp = param.split("="), k = kvp[0], v = kvp[1];
+      if (v == null) v = true;
       k = decode(k), v = decode(v), ls = params[k];
       if (_isArray(ls)) ls.push(v);
       else if (ls) params[k] = [ls, v];
@@ -116,12 +117,22 @@
   var PARAM_TRIM_RE = /[\s'"]/g;
   var URL_TRIM_RE = /[<>\s'"]/g;
 
+
+  /**
+   * State change event. Fired when PageableCollection#state gets updated
+   *
+   * @event pageable:state:change
+   * @type {object} The PageableCollection#state object of this
+   * PageableCollection instance
+   */
+
+
   /**
      Drop-in replacement for Backbone.Collection. Supports server-side and
      client-side pagination and sorting. Client-side mode also support fully
      multi-directional synchronization of changes between pages.
 
-     @class Backbone.PageableCollection
+     @class PageableCollection
      @extends Backbone.Collection
   */
   var PageableCollection = Backbone.PageableCollection = Backbone.Collection.extend({
@@ -132,42 +143,41 @@
        You can override the default state by extending this class or specifying
        them in an `options` hash to the constructor.
 
-       @property {Object} state
-
-       @property {0|1} [state.firstPage=1] The first page index. Set to 0 if
+       @property {number} firstPage = 1 - The first page index. Set to 0 if
        your server API uses 0-based indices. You should only override this value
        during extension, initialization or reset by the server after
        fetching. This value should be read only at other times.
 
-       @property {number} [state.lastPage=null] The last page index. This value
+       @property {number} lastPage = null - The last page index. This value
        is __read only__ and it's calculated based on whether `firstPage` is 0 or
        1, during bootstrapping, fetching and resetting. Please don't change this
        value under any circumstances.
 
-       @property {number} [state.currentPage=null] The current page index. You
+       @property {number} currentPage = null - The current page index. You
        should only override this value during extension, initialization or reset
        by the server after fetching. This value should be read only at other
        times. Can be a 0-based or 1-based index, depending on whether
        `firstPage` is 0 or 1. If left as default, it will be set to `firstPage`
        on initialization.
 
-       @property {number} [state.pageSize=25] How many records to show per
+       @property {number} pageSize = 25 - How many records to show per
        page. This value is __read only__ after initialization, if you want to
-       change the page size after initialization, you must call #setPageSize.
+       change the page size after initialization, you must call
+       PageableCollection#setPageSize.
 
-       @property {number} [state.totalPages=null] How many pages there are. This
+       @property {number} totalPages = null - How many pages there are. This
        value is __read only__ and it is calculated from `totalRecords`.
 
-       @property {number} [state.totalRecords=null] How many records there
+       @property {number} totalRecords = null - How many records there
        are. This value is __required__ under server mode. This value is optional
        for client mode as the number will be the same as the number of models
        during bootstrapping and during fetching, either supplied by the server
        in the metadata, or calculated from the size of the response.
 
-       @property {string} [state.sortKey=null] The model attribute to use for
+       @property {string} sortKey = null - The model attribute to use for
        sorting.
 
-       @property {-1|0|1} [state.order=-1] The order to use for sorting. Specify
+       @property {number} order = -1 - The order to use for sorting. Specify
        -1 for ascending order or 1 for descending order. If 0, no client side
        sorting will be done and the order query parameter will not be sent to
        the server during a fetch.
@@ -184,30 +194,29 @@
     },
 
     /**
-       @property {"server"|"client"|"infinite"} [mode="server"] The mode of
-       operations for this collection. `"server"` paginates on the server-side,
-       `"client"` paginates on the client-side and `"infinite"` paginates on the
-       server-side for APIs that do not support `totalRecords`.
+       @property {string} mode = "server" The mode of operations for this
+       collection. `"server"` paginates on the server-side, `"client"` paginates
+       on the client-side and `"infinite"` paginates on the server-side for APIs
+       that do not support `totalRecords`.
     */
     mode: "server",
 
     /**
-       A translation map to convert Backbone.PageableCollection state attributes
+       A translation map to convert PageableCollection state attributes
        to the query parameters accepted by your server API.
 
        You can override the default state by extending this class or specifying
        them in `options.queryParams` object hash to the constructor.
 
-       @property {Object} queryParams
-       @property {string} [queryParams.currentPage="page"]
-       @property {string} [queryParams.pageSize="per_page"]
-       @property {string} [queryParams.totalPages="total_pages"]
-       @property {string} [queryParams.totalRecords="total_entries"]
-       @property {string} [queryParams.sortKey="sort_by"]
-       @property {string} [queryParams.order="order"]
-       @property {string} [queryParams.directions={"-1": "asc", "1": "desc"}] A
-       map for translating a Backbone.PageableCollection#state.order constant to
-       the ones your server API accepts.
+       @property {string|function():string} currentPage = "page"
+       @property {string|function():string} pageSize = "per_page"
+       @property {string|function():string} totalPages = "total_pages"
+       @property {string|function():string} totalRecords = "total_entries"
+       @property {string|function():string} sortKey = "sort_by"
+       @property {string|function():string} order = "order"
+       @property {Object} directions = {"-1": "asc", "1": "desc"} - A map for
+       translating a PageableCollection#state.order constant to the ones your
+       server API accepts.
     */
     queryParams: {
       currentPage: "page",
@@ -223,15 +232,6 @@
     },
 
     /**
-       __CLIENT MODE ONLY__
-
-       This collection is the internal storage for the bootstrapped or fetched
-       models. You can use this if you want to operate on all the pages.
-
-       @property {Backbone.Collection} fullCollection
-    */
-
-    /**
        Given a list of models or model attributues, bootstraps the full
        collection in client mode or infinite mode, or just the page you want in
        server mode.
@@ -239,42 +239,49 @@
        If you want to initialize a collection to a different state than the
        default, you can specify them in `options.state`. Any state parameters
        supplied will be merged with the default. If you want to change the
-       default mapping from #state keys to your server API's query parameter
-       names, you can specifiy an object hash in `option.queryParams`. Likewise,
-       any mapping provided will be merged with the default. Lastly, all
-       Backbone.Collection constructor options are also accepted.
+       default mapping from PageableCollection#state keys to your server API's
+       query parameter names, you can specifiy an object hash in
+       `option.queryParams`. Likewise, any mapping provided will be merged with
+       the default. Lastly, all Backbone.Collection constructor options are also
+       accepted.
 
        See:
 
-       - Backbone.PageableCollection#state
-       - Backbone.PageableCollection#queryParams
+       - PageableCollection#state
+       - PageableCollection#queryParams
        - [Backbone.Collection#initialize](http://backbonejs.org/#Collection-constructor)
 
-       @param {Array.<Object>} [models]
+       @constructor
 
-       @param {Object} [options]
+       @property {Backbone.Collection} fullCollection - __CLIENT MODE ONLY__
+       This collection is the internal storage for the bootstrapped or fetched
+       models. You can use this if you want to operate on all the pages.
 
-       @param {function(*, *): number} [options.comparator] If specified, this
-       comparator is set to the current page under server mode, or the #fullCollection
-       otherwise.
+       @param {Array.<Object>} models
 
-       @param {boolean} [options.full] If `false` and either a
+       @param {Object} options
+
+       @param {function(*, *): number} options.comparator - If specified, this
+       comparator is set to the current page under server mode, or the
+       PageableCollection#fullCollection otherwise.
+
+       @param {boolean} options.full 0 If `false` and either a
        `options.comparator` or `sortKey` is defined, the comparator is attached
        to the current page. Default is `true` under client or infinite mode and
-       the comparator will be attached to the #fullCollection.
+       the comparator will be attached to the PageableCollection#fullCollection.
 
-       @param {Object} [options.state] The state attributes overriding the defaults.
+       @param {Object} options.state - The state attributes overriding the defaults.
 
-       @param {string} [options.state.sortKey] The model attribute to use for
+       @param {string} options.state.sortKey - The model attribute to use for
        sorting. If specified instead of `options.comparator`, a comparator will
        be automatically created using this value, and optionally a sorting order
        specified in `options.state.order`. The comparator is then attached to
        the new collection instance.
 
-       @param {-1|1} [options.state.order] The order to use for sorting. Specify
+       @param {number} options.state.order - The order to use for sorting. Specify
        -1 for ascending order and 1 for descending order.
 
-       @param {Object} [options.queryParam]
+       @param {Object} options.queryParam
     */
     constructor: function (models, options) {
 
@@ -290,12 +297,12 @@
       queryParams.directions = _extend({},
                                        PageableProto.queryParams.directions,
                                        this.queryParams.directions,
-                                       queryParams.directions || {});
+                                       queryParams.directions);
 
       this.queryParams = queryParams;
 
       var state = this.state = _extend({}, PageableProto.state, this.state,
-                                       options.state || {});
+                                       options.state);
 
       state.currentPage = state.currentPage == null ?
         state.firstPage :
@@ -305,7 +312,9 @@
       models = models.slice();
 
       if (mode != "server" && state.totalRecords == null && !_isEmpty(models)) {
-        state.totalRecords = models.length;
+        // Can't use models.length naively here because Backbone.Collection will
+        // dedupe by `idAttribute`
+        state.totalRecords = this.length;
       }
 
       this.switchMode(mode, _extend({fetch: false,
@@ -330,10 +339,8 @@
 
         // make sure the models in the current page and full collection have the
         // same references
-        if (models && !_isEmpty(models)) {
-          this.reset(models, _extend({silent: true}, options));
+        if (!_isEmpty(models)) {
           this.getPage(state.currentPage);
-          models.splice.apply(models, [0, models.length].concat(this.models));
         }
       }
 
@@ -382,7 +389,10 @@
 
        @private
 
-       @param {Backbone.PageableCollection} pageCol
+       @fires PageableCollection#pageable:state:change when handling an
+       `add`, `remove`, or `reset` event
+
+       @param {PageableCollection} pageCol
        @param {Backbone.Collection} fullCol
 
        @return {function(string, Backbone.Model, Backbone.Collection, Object)}
@@ -433,7 +443,7 @@
           pageCol.state = pageCol._checkState(state);
 
           if (colToAdd) {
-            colToAdd.add(model, _extend({}, options || {}, {at: addAt}));
+            colToAdd.add(model, _extend({}, options, {at: addAt}));
             var modelToRemove = pageIndex >= pageSize ?
               model :
               !_isUndefined(options.at) && addAt < pageEnd && pageCol.length > pageSize ?
@@ -445,6 +455,8 @@
               });
             }
           }
+
+          if (!options.silent) pageCol.trigger("pageable:state:change", pageCol.state);
         }
 
         // remove the model from the other collection as well
@@ -477,7 +489,7 @@
             }
             else if (removedIndex >= pageStart && removedIndex < pageEnd) {
               if (nextModel = fullCol.at(pageEnd - 1)) {
-                runOnceAtLastHandler(pageCol, event, function() {
+                runOnceAtLastHandler(pageCol, event, function () {
                   pageCol.push(nextModel, {onRemove: true});
                 });
               }
@@ -489,6 +501,8 @@
             }
           }
           else delete options.onAdd;
+
+          if (!options.silent) pageCol.trigger("pageable:state:change", pageCol.state);
         }
 
         if (event == "reset") {
@@ -508,12 +522,17 @@
               state.totalPages = null;
             }
             if (pageCol.mode == "client") {
-              state.lastPage = state.currentPage = state.firstPage;
+              firstPage = state.lastPage = state.currentPage = state.firstPage;
+              currentPage = firstPage === 0 ? state.currentPage : state.currentPage - 1;
+              pageStart = currentPage * pageSize;
+              pageEnd = pageStart + pageSize;
             }
             pageCol.state = pageCol._checkState(state);
             pageCol.reset(fullCol.models.slice(pageStart, pageEnd),
                           _extend({}, options, {parse: false}));
           }
+
+          if (!options.silent) pageCol.trigger("pageable:state:change", pageCol.state);
         }
 
         if (event == "sort") {
@@ -545,6 +564,8 @@
 
        @private
 
+       @param {Object} state
+
        @throws {TypeError} If `totalRecords`, `pageSize`, `currentPage` or
        `firstPage` is not a finite integer.
 
@@ -554,7 +575,6 @@
        @return {Object} Returns the `state` object if no error was found.
     */
     _checkState: function (state) {
-
       var mode = this.mode;
       var links = this.links;
       var totalRecords = state.totalRecords;
@@ -584,7 +604,7 @@
         state.lastPage = firstPage === 0 ? max(0, totalPages - 1) : totalPages || firstPage;
 
         if (mode == "infinite") {
-          if (!links[currentPage + '']) {
+          if (!links[currentPage]) {
             throw new RangeError("No link found for page " + currentPage);
           }
         }
@@ -594,7 +614,7 @@
           throw new RangeError("`currentPage` must be firstPage <= currentPage " +
                                (firstPage ? "<" : "<=") +
                                " totalPages if " + firstPage + "-based. Got " +
-                               currentPage + '.');
+                               currentPage + ".");
         }
       }
 
@@ -615,8 +635,8 @@
        If `options.first` is true, changing the page size will also reset the
        current page back to the first page instead of trying to be smart.
 
-       For server mode operations, changing the page size will trigger a #fetch
-       and subsequently a `reset` event.
+       For server mode operations, changing the page size will trigger a
+       PageableCollection#fetch and subsequently a `reset` event.
 
        For client mode operations, changing the page size will `reset` the
        current page by recalculating the current page boundary on the client
@@ -625,17 +645,17 @@
        If `options.fetch` is true, a fetch can be forced if the collection is in
        client mode.
 
-       @param {number} pageSize The new page size to set to #state.
-       @param {Object} [options] {@link #fetch} options.
-       @param {boolean} [options.first=false] Reset the current page number to
+       @param {number} pageSize - The new page size to set to PageableCollection#state.
+       @param {Object} options - {@link PageableCollection#fetch} options.
+       @param {boolean} options.first = false 0 Reset the current page number to
        the first page if `true`.
-       @param {boolean} [options.fetch] If `true`, force a fetch in client mode.
+       @param {boolean} options.fetch - If `true`, force a fetch in client mode.
 
        @throws {TypeError} If `pageSize` is not a finite integer.
        @throws {RangeError} If `pageSize` is less than 1.
 
        @chainable
-       @return {XMLHttpRequest|Backbone.PageableCollection} The XMLHttpRequest
+       @return {XMLHttpRequest|PageableCollection} The XMLHttpRequest
        from fetch or this.
     */
     setPageSize: function (pageSize, options) {
@@ -666,26 +686,29 @@
        page from the server. Pass `false` to `options.fetch` to skip fetching.
 
        If switching to infinite mode, and if `options.models` is given for an
-       array of models, #links will be populated with a URL per page, using the
-       default URL for this collection.
+       array of models,PageableCollection#links will be populated with a URL per
+       page, using the default URL for this collection.
 
        If switching from server to client mode, all of the pages are immediately
        refetched. If you have too many pages, you can pass `false` to
        `options.fetch` to skip fetching.
 
-       If switching to any mode from infinite mode, the #links will be deleted.
+       If switching to any mode from infinite mode, thePageableCollection#links
+       will be deleted.
 
-       @param {"server"|"client"|"infinite"} [mode] The mode to switch to.
+       @fires PageableCollection#pageable:state:change
 
-       @param {Object} [options]
+       @param {"server"|"client"|"infinite"} mode - The mode to switch to.
 
-       @param {boolean} [options.fetch=true] If `false`, no fetching is done.
+       @param {Object} options
 
-       @param {boolean} [options.resetState=true] If 'false', the state is not
+       @param {boolean} options.fetch = true - If `false`, no fetching is done.
+
+       @param {boolean} options.resetState = true - If 'false', the state is not
        reset, but checked for sanity instead.
 
        @chainable
-       @return {XMLHttpRequest|Backbone.PageableCollection} The XMLHttpRequest
+       @return {XMLHttpRequest|PageableCollection} The XMLHttpRequest
        from fetch or this if `options.fetch` is `false`.
     */
     switchMode: function (mode, options) {
@@ -739,6 +762,8 @@
       }
       else if (this.links) delete this.links;
 
+      if (!options.silent) this.trigger("pageable:state:change", state);
+
       return options.fetch ?
         this.fetch(_omit(options, "fetch", "resetState")) :
         this;
@@ -770,10 +795,10 @@
        Fetch the first page in server mode, or reset the current page of this
        collection to the first page in client or infinite mode.
 
-       @param {Object} options {@link #getPage} options.
+       @param {Object} options {@linkPageableCollection#getPage} options.
 
        @chainable
-       @return {XMLHttpRequest|Backbone.PageableCollection} The XMLHttpRequest
+       @return {XMLHttpRequest|PageableCollection} The XMLHttpRequest
        from fetch or this.
     */
     getFirstPage: function (options) {
@@ -784,10 +809,10 @@
        Fetch the previous page in server mode, or reset the current page of this
        collection to the previous page in client or infinite mode.
 
-       @param {Object} options {@link #getPage} options.
+       @param {Object} options {@linkPageableCollection#getPage} options.
 
        @chainable
-       @return {XMLHttpRequest|Backbone.PageableCollection} The XMLHttpRequest
+       @return {XMLHttpRequest|PageableCollection} The XMLHttpRequest
        from fetch or this.
     */
     getPreviousPage: function (options) {
@@ -798,10 +823,10 @@
        Fetch the next page in server mode, or reset the current page of this
        collection to the next page in client mode.
 
-       @param {Object} options {@link #getPage} options.
+       @param {Object} options {@linkPageableCollection#getPage} options.
 
        @chainable
-       @return {XMLHttpRequest|Backbone.PageableCollection} The XMLHttpRequest
+       @return {XMLHttpRequest|PageableCollection} The XMLHttpRequest
        from fetch or this.
     */
     getNextPage: function (options) {
@@ -812,10 +837,10 @@
        Fetch the last page in server mode, or reset the current page of this
        collection to the last page in client mode.
 
-       @param {Object} options {@link #getPage} options.
+       @param {Object} options {@linkPageableCollection#getPage} options.
 
        @chainable
-       @return {XMLHttpRequest|Backbone.PageableCollection} The XMLHttpRequest
+       @return {XMLHttpRequest|PageableCollection} The XMLHttpRequest
        from fetch or this.
     */
     getLastPage: function (options) {
@@ -823,31 +848,35 @@
     },
 
     /**
-       Given a page index, set #state.currentPage to that index. If this
-       collection is in server mode, fetch the page using the updated state,
-       otherwise, reset the current page of this collection to the page
-       specified by `index` in client mode. If `options.fetch` is true, a fetch
-       can be forced in client mode before resetting the current page. Under
-       infinite mode, if the index is less than the current page, a reset is
-       done as in client mode. If the index is greater than the current page
-       number, a fetch is made with the results **appended** to #fullCollection.
-       The current page will then be reset after fetching.
+       Given a page index, set PageableCollection#state.currentPage to that
+       index. If this collection is in server mode, fetch the page using the
+       updated state, otherwise, reset the current page of this collection to
+       the page specified by `index` in client mode. If `options.fetch` is true,
+       a fetch can be forced in client mode before resetting the current
+       page. Under infinite mode, if the index is less than the current page, a
+       reset is done as in client mode. If the index is greater than the current
+       page number, a fetch is made with the results **appended**
+       toPageableCollection#fullCollection.  The current page will then be reset
+       after fetching.
 
-       @param {number|string} index The page index to go to, or the page name to
-       look up from #links in infinite mode.
-       @param {Object} [options] {@link #fetch} options or
+       @fires PageableCollection#pageable:state:change
+
+       @param {number|string} index - The page index to go to, or the page name to
+       look up fromPageableCollection#links in infinite mode.
+       @param {Object} options - {@linkPageableCollection#fetch} options or
        [reset](http://backbonejs.org/#Collection-reset) options for client mode
        when `options.fetch` is `false`.
-       @param {boolean} [options.fetch=false] If true, force a {@link #fetch} in
-       client mode.
+       @param {boolean} options.fetch = false - If true, force a
+       {@linkPageableCollection#fetch} in client mode.
 
        @throws {TypeError} If `index` is not a finite integer under server or
-       client mode, or does not yield a URL from #links under infinite mode.
+       client mode, or does not yield a URL fromPageableCollection#links under
+       infinite mode.
 
        @throws {RangeError} If `index` is out of bounds.
 
        @chainable
-       @return {XMLHttpRequest|Backbone.PageableCollection} The XMLHttpRequest
+       @return {XMLHttpRequest|PageableCollection} The XMLHttpRequest
        from fetch or this.
     */
     getPage: function (index, options) {
@@ -872,6 +901,7 @@
       }
 
       this.state = this._checkState(_extend({}, state, {currentPage: pageNum}));
+      if (!options.silent) this.trigger("pageable:state:change", this.state);
 
       options.from = currentPage, options.to = pageNum;
 
@@ -891,20 +921,22 @@
     },
 
     /**
-       Fetch the page for the provided item offset in server mode, or reset the current page of this
-       collection to the page for the provided item offset in client mode.
+       Fetch the page for the provided item offset in server mode, or reset the
+       current page of this collection to the page for the provided item offset
+       in client mode.
 
-       @param {Object} options {@link #getPage} options.
+       @param {number} offset
+       @param {Object} options {@linkPageableCollection#getPage} options.
 
        @chainable
-       @return {XMLHttpRequest|Backbone.PageableCollection} The XMLHttpRequest
+       @return {XMLHttpRequest|PageableCollection} The XMLHttpRequest
        from fetch or this.
     */
     getPageByOffset: function (offset, options) {
       if (offset < 0) {
         throw new RangeError("`offset must be > 0`");
       }
-      offset = finiteInt(offset);
+      offset = finiteInt(offset, "offset");
 
       var page = floor(offset / this.state.pageSize);
       if (this.state.firstPage !== 0) page++;
@@ -917,7 +949,7 @@
 
        @param {string} method
        @param {Backbone.Model|Backbone.Collection} model
-       @param {Object} [options]
+       @param {Object} options
 
        @return {XMLHttpRequest}
     */
@@ -953,8 +985,8 @@
        are no more links should be enough for most implementations.
 
        @param {*} resp The deserialized response body.
-       @param {Object} [options]
-       @param {XMLHttpRequest} [options.xhr] The XMLHttpRequest object for this
+       @param {Object} options
+       @param {XMLHttpRequest} options.xhr - The XMLHttpRequest object for this
        response.
        @return {Object}
     */
@@ -965,12 +997,12 @@
         var relations = ["first", "prev", "next"];
         _each(linkHeader.split(","), function (linkValue) {
           var linkParts = linkValue.split(";");
-          var url = linkParts[0].replace(URL_TRIM_RE, '');
+          var url = linkParts[0].replace(URL_TRIM_RE, "");
           var params = linkParts.slice(1);
           _each(params, function (param) {
             var paramParts = param.split("=");
-            var key = paramParts[0].replace(PARAM_TRIM_RE, '');
-            var value = paramParts[1].replace(PARAM_TRIM_RE, '');
+            var key = paramParts[0].replace(PARAM_TRIM_RE, "");
+            var value = paramParts[1].replace(PARAM_TRIM_RE, "");
             if (key == "rel" && _contains(relations, value)) links[value] = url;
           });
         });
@@ -1004,17 +1036,23 @@
        default.
 
        **Note:** this method has been further simplified since 1.1.7. While
-       existing #parse implementations will continue to work, new code is
-       encouraged to override #parseState and #parseRecords instead.
+       existingPageableCollection#parse implementations will continue to work,
+       new code is encouraged to overridePageableCollection#parseState
+       andPageableCollection#parseRecords instead.
+
+       @fires PageableCollection#pageable:state:change
 
        @param {Object} resp The deserialized response data from the server.
-       @param {Object} the options for the ajax request
+       @param {Object} options The options for the ajax request
 
        @return {Array.<Object>} An array of model objects
     */
     parse: function (resp, options) {
       var newState = this.parseState(resp, _clone(this.queryParams), _clone(this.state), options);
-      if (newState) this.state = this._checkState(_extend({}, this.state, newState));
+      if (newState) {
+        this.state = this._checkState(_extend({}, this.state, newState));
+        if (!(options || {}).silent) this.trigger("pageable:state:change", this.state);
+      }
       return this.parseRecords(resp, options);
     },
 
@@ -1023,16 +1061,16 @@
        under infinite mode.
 
        This default implementation first checks whether the response has any
-       state object as documented in #parse. If it exists, a state object is
-       returned by mapping the server state keys to this pageable collection
-       instance's query parameter keys using `queryParams`.
+       state object as documented inPageableCollection#parse. If it exists, a
+       state object is returned by mapping the server state keys to this
+       pageable collection instance's query parameter keys using `queryParams`.
 
        It is __NOT__ neccessary to return a full state object complete with all
-       the mappings defined in #queryParams. Any state object resulted is merged
-       with a copy of the current pageable collection state and checked for
-       sanity before actually updating. Most of the time, simply providing a new
-       `totalRecords` value is enough to trigger a full pagination state
-       recalculation.
+       the mappings defined inPageableCollection#queryParams. Any state object
+       resulted is merged with a copy of the current pageable collection state
+       and checked for sanity before actually updating. Most of the time, simply
+       providing a new `totalRecords` value is enough to trigger a full
+       pagination state recalculation.
 
            parseState: function (resp, queryParams, state, options) {
              return {totalRecords: resp.total_entries};
@@ -1045,13 +1083,13 @@
            }
 
        This method __MUST__ return a new state object instead of directly
-       modifying the #state object. The behavior of directly modifying #state is
-       undefined.
+       modifying the PageableCollection#state object. The behavior of directly
+       modifying PageableCollection#state is undefined.
 
-       @param {Object} resp The deserialized response data from the server.
-       @param {Object} queryParams A copy of #queryParams.
-       @param {Object} state A copy of #state.
-       @param {Object} [options] The options passed through from
+       @param {Object} resp - The deserialized response data from the server.
+       @param {Object} queryParams - A copy of PageableCollection#queryParams.
+       @param {Object} state - A copy of PageableCollection#state.
+       @param {Object} options - The options passed through from
        `parse`. (backbone >= 0.9.10 only)
 
        @return {Object} A new (partial) state object.
@@ -1080,12 +1118,12 @@
        Parse server response for an array of model objects.
 
        This default implementation first checks whether the response has any
-       state object as documented in #parse. If it exists, the array of model
-       objects is assumed to be the second element, otherwise the entire
-       response is returned directly.
+       state object as documented inPageableCollection#parse. If it exists, the
+       array of model objects is assumed to be the second element, otherwise the
+       entire response is returned directly.
 
-       @param {Object} resp The deserialized response data from the server.
-       @param {Object} [options] The options passed through from the
+       @param {Object} resp - The deserialized response data from the server.
+       @param {Object} options - The options passed through from the
        `parse`. (backbone >= 0.9.10 only)
 
        @return {Array.<Object>} An array of model objects
@@ -1104,10 +1142,11 @@
        then reset.
 
        The query string is constructed by translating the current pagination
-       state to your server API query parameter using #queryParams. The current
-       page will reset after fetch.
+       state to your server API query parameter
+       usingPageableCollection#queryParams. The current page will reset after
+       fetch.
 
-       @param {Object} [options] Accepts all
+       @param {Object} options - Accepts all
        [Backbone.Collection#fetch](http://backbonejs.org/#Collection-fetch)
        options.
 
@@ -1130,7 +1169,7 @@
       // dedup query params
       var url = options.url || this.url || "";
       if (_isFunction(url)) url = url.call(this);
-      var qsi = url.indexOf('?');
+      var qsi = url.indexOf("?");
       if (qsi != -1) {
         _extend(data, queryStringToParams(url.slice(qsi + 1)));
         url = url.slice(0, qsi);
@@ -1139,37 +1178,49 @@
       options.url = url;
       options.data = data;
 
-      // map params except directions
+      // pick the appropriate query param keys to map according to the mode
       var queryParams = this.mode == "client" ?
-        _pick(this.queryParams, "sortKey", "order") :
-        _omit(_pick(this.queryParams, _keys(PageableProto.queryParams)),
-              "directions");
+          _pick(this.queryParams, "sortKey") :
+          _omit(_pick(this.queryParams, _keys(PageableProto.queryParams)),
+                "order", "directions", "totalPages", "totalRecords");
 
-      var i, kvp, k, v, kvps = _pairs(queryParams), thisCopy = _clone(this);
-      for (i = 0; i < kvps.length; i++) {
-        kvp = kvps[i], k = kvp[0], v = kvp[1];
-        v = _isFunction(v) ? v.call(thisCopy) : v;
-        if (state[k] != null && v != null) {
+      // map the query params to the data object used by the underlying ajax lib
+      // to construct the query string
+      _each(queryParams, function (v, k) {
+        v = _isFunction(v) ? v.call(this) : v;
+        if (state[k] != null && v != null && _.isUndefined(data[v])) {
           data[v] = state[k];
         }
-      }
+      }, this);
 
-      // fix up sorting parameters
-      if (state.sortKey && state.order) {
-        var o = _isFunction(queryParams.order) ?
-          queryParams.order.call(thisCopy) :
-          queryParams.order;
-        data[o] = this.queryParams.directions[state.order + ""];
+      var sortKey = _isFunction(this.queryParams.sortKey) ?
+          this.queryParams.sortKey.call(this) :
+          this.queryParams.sortKey;
+
+      var order = _isFunction(this.queryParams.order) ?
+          this.queryParams.order.call(this) :
+          this.queryParams.order;
+
+      if (sortKey != null && state.sortKey != null &&
+          order != null && state.order != null) {
+        if (_isArray(state.order)) {
+          data[order] = [];
+          for (var i = 0; i < state.order.length; i++) {
+            data[order].push(this.queryParams.directions[state.order[i]]);
+          }
+        }
+        else {
+          data[order] = this.queryParams.directions[state.order + ""];
+        }
       }
-      else if (!state.sortKey) delete data[queryParams.order];
 
       // map extra query parameters
       var extraKvps = _pairs(_omit(this.queryParams,
                                    _keys(PageableProto.queryParams)));
-      for (i = 0; i < extraKvps.length; i++) {
-        kvp = extraKvps[i];
-        v = kvp[1];
-        v = _isFunction(v) ? v.call(thisCopy) : v;
+      for (var i = 0; i < extraKvps.length; i++) {
+        var kvp = extraKvps[i];
+        var v = kvp[1];
+        v = _isFunction(v) ? v.call(this) : v;
         if (v != null) data[kvp[0]] = v;
       }
 
@@ -1205,26 +1256,30 @@
        Convenient method for making a `comparator` sorted by a model attribute
        identified by `sortKey` and ordered by `order`.
 
-       Like a Backbone.Collection, a Backbone.PageableCollection will maintain
-       the __current page__ in sorted order on the client side if a `comparator`
-       is attached to it. If the collection is in client mode, you can attach a
-       comparator to #fullCollection to have all the pages reflect the global
-       sorting order by specifying an option `full` to `true`. You __must__ call
-       `sort` manually or #fullCollection.sort after calling this method to
+       Like a Backbone.Collection, a PageableCollection will maintain the
+       __current page__ in sorted order on the client side if a `comparator` is
+       attached to it. If the collection is in client mode, you can attach a
+       comparator toPageableCollection#fullCollection to have all the pages
+       reflect the global sorting order by specifying an option `full` to
+       `true`. You __must__ call `sort` manually
+       orPageableCollection#fullCollection.sort after calling this method to
        force a resort.
 
        While you can use this method to sort the current page in server mode,
        the sorting order may not reflect the global sorting order due to the
        additions or removals of the records on the server since the last
        fetch. If you want the most updated page in a global sorting order, it is
-       recommended that you set #state.sortKey and optionally #state.order, and
-       then call #fetch.
+       recommended that you set PageableCollection#state.sortKey and optionally
+       PageableCollection#state.order, and then callPageableCollection#fetch.
 
        @protected
 
-       @param {string} [sortKey=this.state.sortKey] See `state.sortKey`.
-       @param {number} [order=this.state.order] See `state.order`.
-       @param {(function(Backbone.Model, string): Object) | string} [sortValue] See #setSorting.
+       @param {string} sortKey = this.state.sortKey - See `state.sortKey`.
+       @param {number} order = this.state.order - See `state.order`.
+       @param {(function(Backbone.Model, string): Object) | string} sortValue -
+       See PageableCollection#setSorting.
+
+       @return {function(Backbone.Model, string): number}
 
        See [Backbone.Collection.comparator](http://backbonejs.org/#Collection-comparator).
     */
@@ -1236,9 +1291,11 @@
 
       if (!sortKey || !order) return;
 
-      if (!sortValue) sortValue = function (model, attr) {
-        return model.get(attr);
-      };
+      if (!sortValue) {
+        sortValue = function (model, attr) {
+          return model.get(attr);
+        };
+      }
 
       return function (left, right) {
         var l = sortValue(left, sortKey), r = sortValue(right, sortKey), t;
@@ -1255,10 +1312,10 @@
        Given a `sortKey` and an `order`, sets `state.sortKey` and
        `state.order`. A comparator can be applied on the client side to sort in
        the order defined if `options.side` is `"client"`. By default the
-       comparator is applied to the #fullCollection. Set `options.full` to
-       `false` to apply a comparator to the current page under any mode. Setting
-       `sortKey` to `null` removes the comparator from both the current page and
-       the full collection.
+       comparator is applied to thePageableCollection#fullCollection. Set
+       `options.full` to `false` to apply a comparator to the current page under
+       any mode. Setting `sortKey` to `null` removes the comparator from both
+       the current page and the full collection.
 
        If a `sortValue` function is given, it will be passed the `(model,
        sortKey)` arguments and is used to extract a value from the model during
@@ -1267,13 +1324,15 @@
 
        @chainable
 
-       @param {string} sortKey See `state.sortKey`.
-       @param {number} [order=this.state.order] See `state.order`.
-       @param {Object} [options]
-       @param {"server"|"client"} [options.side] By default, `"client"` if
-       `mode` is `"client"`, `"server"` otherwise.
-       @param {boolean} [options.full=true]
-       @param {(function(Backbone.Model, string): Object) | string} [options.sortValue]
+       @param {string} sortKey - See `state.sortKey`.
+       @param {number} order=this.state.order - See `state.order`.
+       @param {Object} options
+       @param {string} options.side - By default, `"client"` if `mode` is
+       `"client"`, `"server"` otherwise.
+       @param {boolean} options.full = true
+       @param {(function(Backbone.Model, string): Object) | string} options.sortValue
+
+       @return {PageableCollection} this
     */
     setSorting: function (sortKey, order, options) {
 

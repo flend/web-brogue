@@ -16,7 +16,7 @@ define(['dataIO/router', 'dispatcher', 'io', 'config'], function(router, dispatc
     socket.on('connect', function() {
     });
 
-    socket.on('reconnect', function() {
+    socket.io.on('reconnect', function() {
         dispatcher.trigger("reconnect");
     });
 

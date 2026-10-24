@@ -5,7 +5,7 @@ var expect = require("chai").expect;
 var server = require("./server-test");
 var config = require("./config-test");
 
-var db = mongoose.createConnection(config.db.url);
+
 
 describe("users", function(){
 
@@ -26,20 +26,24 @@ describe("users", function(){
             password: "fluffy"
         };
 
-        userRecord.create([userRecord1, userRecord2, userRecord3], function() {
+        userRecord.create([userRecord1, userRecord2, userRecord3]).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     afterEach(function(done) {
 
-        userRecord.remove({}, function() {
+        userRecord.deleteMany({}).then(function () {
             done();
+        }).catch(function (err) {
+            done(err);
         });
     });
 
     it("returns status 200", function(done) {
-      request(server)
+      request(server.app)
           .get("/api/users")
           .set('Accept', 'application/json')
           .expect('Content-Type', /json/)
@@ -47,7 +51,7 @@ describe("users", function(){
     });
 
     it("returns all user names", function(done) {
-        request(server)
+        request(server.app)
             .get("/api/users")
             .set('Accept', 'application/json')
             .end(function(err, res) {

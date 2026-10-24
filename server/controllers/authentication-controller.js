@@ -13,7 +13,7 @@ function AuthController(socket) {
     this.controllerName = "auth";
     this.socket = socket;
     this.controllers = null;
-    
+
     this.authenticatedUserName = null;
     this.anonUserName = this.createAnonUserName();
 }
@@ -31,39 +31,35 @@ _.extend(AuthController.prototype, {
 
             if ((data.username == null || data.password == null) && data.token == null) {
                 self.controllers.error.send("Invalid authentication data sent: " + data);
+                return;
             }
 
             if(data.token == null) {
 
                 //Username / password authentication
 
-                User.findOne({'username': data.username},
-                    function (err, user) {
-                        if (err) {
-                            self.controllers.error.send(JSON.stringify(err));
-                            return;
-                        }
-
-                        if (!user) {
-                            self.sendMessage("auth", {
-                                result: "fail",
-                                data: "Invalid username or password!"
-                            });
-                            return;
-                        }
-
-                        if (user.isValidPassword(data.password)) {
-
-                            self.processSuccessfulLogin(data.username);
-                        }
-                        else {
-                            self.sendMessage("auth", {
-                                result: "fail",
-                                data: "Invalid username or password!"
-                            });
-                        }
+                User.findOne({'username': data.username}).then(function (user) {
+                    if (!user) {
+                        self.sendMessage("auth", {
+                            result: "fail",
+                            data: "Invalid username or password!"
+                        });
+                        return;
                     }
-                );
+                    if (user.isValidPassword(data.password)) {
+
+                        self.processSuccessfulLogin(data.username);
+                    }
+                    else {
+                        self.sendMessage("auth", {
+                            result: "fail",
+                            data: "Invalid username or password!"
+                        });
+                    }
+                }).catch(function (err) {
+                    self.controllers.error.send(JSON.stringify(err));
+                    return;
+                });
             }
             else {
 
@@ -79,35 +75,27 @@ _.extend(AuthController.prototype, {
                     return;
                 }
 
-                User.findOne({'username': decodedToken.content},
-                    function (err, user) {
-                        if (err) {
-                            self.controllers.error.send(JSON.stringify(err));
-                            return;
-                        }
-
-                        if (!user) {
-                            self.sendMessage("auth", {
-                                result: "fail",
-                                data: "Saved username not found in database!"
-                            });
-                            return;
-                        }
-
-                        var expiryTime = Number(decodedToken.createdAt) + Number(decodedToken.duration);
-
-                        //console.log("expiry: " + expiryTime + " now: " + new Date().getTime());
-
-                        if (expiryTime < new Date().getTime()) {
-                            self.sendMessage("auth", {
-                                result: "fail",
-                                data: "Token has expired!"
-                            });
-                            return;
-                        }
-
-                        self.processSuccessfulLogin(decodedToken.content);
-                    });
+                User.findOne({'username': decodedToken.content}).then(function (user) {
+                    if (!user) {
+                        self.sendMessage("auth", {
+                            result: "fail",
+                            data: "Saved username not found in database!"
+                        });
+                        return;
+                    }
+                    var expiryTime = Number(decodedToken.createdAt) + Number(decodedToken.duration);
+                    if (expiryTime < new Date().getTime()) {
+                        self.sendMessage("auth", {
+                            result: "fail",
+                            data: "Token has expired!"
+                        });
+                        return;
+                    }
+                    self.processSuccessfulLogin(decodedToken.content);
+                }).catch(function (err) {
+                    self.controllers.error.send(JSON.stringify(err));
+                    return;
+                });
                 }
             },
 
@@ -146,12 +134,7 @@ _.extend(AuthController.prototype, {
                 return;
             }
 
-            User.findOne({'username': data.username}, function (err, user) {
-                if (err) {
-                    self.controllers.error.send(JSON.stringify(err));
-                    return;
-                }
-                // already exists
+            User.findOne({'username': data.username}).then(function (user) {
                 if (user) {
                     self.sendMessage("auth", {
                         result: "fail",
@@ -165,11 +148,7 @@ _.extend(AuthController.prototype, {
                     newUser.password = newUser.createHash(data.password);
                     newUser.sessionId = self.createSessionToken(newUser.username);
 
-                    newUser.save(function (err) {
-                        if (err) {
-                            self.controllers.error.send(JSON.stringify(err));
-                        }
-
+                    newUser.save().then(function () {
                         self.sendMessage("auth", {
                             result: "success",
                             data: {
@@ -177,8 +156,13 @@ _.extend(AuthController.prototype, {
                                 token: newUser.sessionId
                             }
                         });
+                    }).catch(function (err) {
+                        self.controllers.error.send(JSON.stringify(err));
                     });
                 }
+            }).catch(function (err) {
+                self.controllers.error.send(JSON.stringify(err));
+                return;
             });
         },
         logout: function (data) {

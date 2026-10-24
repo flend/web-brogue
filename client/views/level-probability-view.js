@@ -58,6 +58,7 @@ define([
 
             //Level probability chart
 
+            if (this.chart) this.chart.destroy();
             var ctx = document.getElementById("level-probability-chart");
             ctx.innerHTML = "<canvas></canvas>";
             ctx = ctx.childNodes[0];
@@ -68,10 +69,10 @@ define([
                 return this;
             }
 
-            Chart.defaults.global.defaultFontColor = '#dddddd';
-            Chart.defaults.global.defaultFontFamily = 'Rubik, "Source Sans Pro", Arial, Helvetica, sans-serif';
+            Chart.defaults.color = '#dddddd';
+            Chart.defaults.font.family = 'Rubik, "Source Sans Pro", Arial, Helvetica, sans-serif';
 
-            new Chart(ctx, {
+            this.chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: levelData,
@@ -85,32 +86,17 @@ define([
                 },
                 options: {
                     aspectRatio: 4,
-                    title: {
-                        display: false,
-                    },
-                    legend: {
-                        display: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: false }
                     },
                     scales: {
-                        xAxes: [{
-                            scaleLabel: {
-                                display: true,
-                                labelString: 'Level'
-                            }
-                        }],
-                        yAxes: [{
-                            gridLines: {
-                                color: 'rgba(128,128,128,0.2)',
-                                zeroLineColor: 'rgba(128,128,128,0.4)'
-                            },
-                            scaleLabel: {
-                                display: true,
-                                labelString: 'Probability of death'
-                            },
-                            ticks: {
-                                beginAtZero: true
-                            }
-                        }]
+                        x: { title: { display: true, text: 'Level' } },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(128,128,128,0.2)' },
+                            title: { display: true, text: 'Probability of death' }
+                        }
                     }
                 }
             });

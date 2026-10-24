@@ -24,19 +24,14 @@ module.exports = function(app, config) {
 
         res.format({
             json: function () {
-                GameRecord.find({variant: variant}).lean().exec(function (err, games) {
-
+                GameRecord.find({variant: variant}).lean().exec().then(function (games) {
                     var allNormalModeGames = _.filter(games, function(game) { return game.easyMode != true; });
-
                     var allDeathGamesWithCause = stats.deathGamesWithCauses(allNormalModeGames);
-
                     if(allDeathGamesWithCause.length == 0) {
                         res.json({});
                         return;
                     }
-
                     var deathGamesByLevel = _.groupBy(allDeathGamesWithCause, "level");
-
                     var deathNumbersByLevel = _.mapObject(deathGamesByLevel, function(levelGames, level) {
 
                         var deathsByCauseOnLevel = _.groupBy(levelGames, "cause");
@@ -56,14 +51,13 @@ module.exports = function(app, config) {
 
                         return numberOfDeathsByCauseOnLevelAsArraySortedWithRank;
                     });
-
                     var deathNumbersCropped = _.mapObject(deathNumbersByLevel, function(levelStats) {
                         return levelStats.slice(0, maxCausesPerLevel);
                     });
-
                     var deathNumbersFlattened = _.flatten(_.map(deathNumbersCropped, function(val) { return val; }));
-
                     res.json(deathNumbersFlattened);
+                }).catch(function (err) {
+                    next(err);
                 });
             }
         });
@@ -78,29 +72,24 @@ module.exports = function(app, config) {
 
         res.format({
             json: function () {
-                GameRecord.find({variant: variant}).lean().exec(function (err, games) {
-
+                GameRecord.find({variant: variant}).lean().exec().then(function (games) {
                     var allNormalModeGames = _.filter(games, function(game) { return game.easyMode != true; });
-
                     var allDeathGamesWithCause = stats.deathGamesWithCauses(allNormalModeGames);
-
                     if(allDeathGamesWithCause.length == 0) {
                         res.json({});
                         return;
                     }
-
                     var deathGamesByLevel = _.groupBy(allDeathGamesWithCause, "level");
-
                     var deathNumbersByLevel = _.mapObject(deathGamesByLevel, function(levelGames, level) {
 
                         var numberOfDeathsOnLevelAsArray = { level: parseInt(level), frequency : levelGames.length };
 
                         return numberOfDeathsOnLevelAsArray;
                     });
-
                     var deathNumbersFlattened = _.flatten(_.map(deathNumbersByLevel, function(val) { return val; }));
-
                     res.json(deathNumbersFlattened);
+                }).catch(function (err) {
+                    next(err);
                 });
             }
         });
@@ -115,40 +104,27 @@ module.exports = function(app, config) {
 
         res.format({
             json: function () {
-                GameRecord.find({variant: variant}).lean().exec(function (err, games) {
-
-                    //To calculate the difficulty, we work out the conditional probability of dying on each level
-                    //Quits are excluded
-                    //Victories are excluded from the deaths, but included in the total number of games to normalise the probability
-
+                GameRecord.find({variant: variant}).lean().exec().then(function (games) {
                     var allNormalModeGames = _.filter(games, function(game) { return game.easyMode != true; });
                     var allNormalModeGamesExcludingQuits = _.reject(allNormalModeGames, function(game) { return game.result == brogueConstants.notifyEvents.GAMEOVER_QUIT });
                     var allNormalModeGamesExcludingQuitsAndVictories = _.reject(allNormalModeGamesExcludingQuits,
                         function(game) { return game.result == brogueConstants.notifyEvents.GAMEOVER_VICTORY || game.result == brogueConstants.notifyEvents.GAMEOVER_SUPERVICTORY });
-
                     if(allNormalModeGamesExcludingQuitsAndVictories.length == 0) {
                         res.json({});
                         return;
                     }
-
                     var deathGamesByLevel = _.groupBy(allNormalModeGamesExcludingQuitsAndVictories, "level");
-
                     var deathNumbersByLevel = _.mapObject(deathGamesByLevel, function(levelGames, level) {
 
                         var numberOfDeathsOnLevelAsArray = { level: parseInt(level), frequency : levelGames.length };
 
                         return numberOfDeathsOnLevelAsArray;
                     });
-
                     var deathNumbersFlattened = _.flatten(_.map(deathNumbersByLevel, function(val) { return val; }));
-
                     var totalGames = allNormalModeGamesExcludingQuits.length;
-
                     var deathsSortedByLevel = _.sortBy(deathNumbersFlattened, 'level');
                     var levelsToConsider = _.pluck(deathsSortedByLevel, 'level');
-
                     var conditionalProbabilities = {};
-
                     _.each(levelsToConsider, function (l) {
                         var deathsOnThisLevel = deathNumbersByLevel[l.toString()];
 
@@ -164,16 +140,15 @@ module.exports = function(app, config) {
 
                         conditionalProbabilities[l] = baseProbability / scaling;
                     });
-
                     var probabilitiesForLevels = _.mapObject(conditionalProbabilities, function(prob, level) {
                         var probabilityForLevel = { level: parseInt(level), probability : prob };
 
                         return probabilityForLevel;
                     });
-
                     var probabilitiesFlattened = _.flatten(_.map(probabilitiesForLevels, function(val) { return val; }));
-
                     res.json(probabilitiesFlattened);
+                }).catch(function (err) {
+                    next(err);
                 });
             }
         });

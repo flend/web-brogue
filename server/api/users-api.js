@@ -7,8 +7,7 @@ module.exports = function(app, config) {
 
     app.get("/api/users", function (req, res, next) {
 
-        UsersRecord.find({}).sort({ username: "asc" }).lean().exec(function (err, users) {
-
+        UsersRecord.find({}).sort({ username: "asc" }).lean().exec().then(function (users) {
             res.format({
                 json: function () {
                     const allUsers = _.map(users, function(user) {
@@ -17,6 +16,8 @@ module.exports = function(app, config) {
                     res.json(allUsers);
                 }
             });
+        }).catch(function (err) {
+            next(err);
         });
     });
 };

@@ -19,7 +19,7 @@ _.extend(ErrorController.prototype, {
     },
     
     log : function(message){
-        util.log(message);
+        console.log(message);
     },
     
     send : function(message){

@@ -1,6 +1,5 @@
 var mongoose = require('mongoose');
 var GameRecord = require("../database/game-record-model");
-var paginate = require("express-paginate");
 var _ = require("underscore");
 var sanitize = require('mongo-sanitize');
 const fs = require('fs');
@@ -12,41 +11,34 @@ module.exports = function(app, config) {
 
         var recordingId = sanitize(req.params.id);
 
-        GameRecord.findById(recordingId, function (err, gameRecord) {
+        if (!mongoose.isObjectIdOrHexString(recordingId)) {
+            return res.status(404).send('Not found');
+        }
 
-            if (err) return next(err);
-
-            if(!gameRecord || 
-                gameRecord && !('recording' in gameRecord)) {
+        GameRecord.findById(recordingId).then(function (gameRecord) {
+            if(!gameRecord || !gameRecord.recording) {
                 res.status(404).send('Not found');
                 return;
             }
-
-            //Blacklist old versions that don't have desktop versions
-            
             if(!stats.doesVariantSupportRecordingDownloads(config, gameRecord.variant)) {
                 res.status(404).send('Not found');
                 return;
             }
-            
             var file = gameRecord.recording;
-
             var filename = "webbrogue-recording-" + recordingId + ".broguerec";
             var mimetype = "application/octet-stream";
-
             res.setHeader('Content-disposition', 'attachment; filename=' + filename);
             res.setHeader('Content-type', mimetype);
-
             var filestream = fs.createReadStream(file);
-
             filestream.on('open', function () {
                 filestream.pipe(res);
             });
-            
             filestream.on('error', function(err) {
                 console.error("Can't find recording: " + file, err);
                 res.status(404).send('Not found');
             });
+        }).catch(function (err) {
+            return next(err);
         });
     });
 };

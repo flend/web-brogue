@@ -1,0 +1,22 @@
+{
+  "name": "web-brogue-client",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=24.15 <25"
+  },
+  "scripts": {
+    "build": "node build-vendor.js"
+  },
+  "dependencies": {
+    "jquery": "^4.0.0",
+    "underscore": "^1.13.8",
+    "backbone": "^1.6.1",
+    "backbone.paginator": "^2.0.8",
+    "backgrid": "^0.3.8",
+    "backgrid-paginator": "^0.3.9",
+    "moment": "^2.31.0",
+    "chart.js": "^4.6.1",
+    "requirejs": "^2.3.8"
+  }
+}

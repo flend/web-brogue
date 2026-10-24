@@ -4,7 +4,7 @@ var path = require('path');
 
 var config = {
     port : {
-        HTTP : 8080
+        HTTP : 0
     },
     brogueVariants : {
         "BROGUE": {
@@ -24,11 +24,11 @@ var config = {
     },
     defaultBrogueVariant: "BROGUE",
     path : {
-        CLIENT_DIR : path.normalize(__dirname + "/../client/"),
-        GAME_DATA_DIR : path.normalize(__dirname + "/../game-data/"),
+        CLIENT_DIR : path.normalize(__dirname + "/../../client/"),
+        GAME_DATA_DIR : path.normalize(__dirname + "/../../game-data/"),
     },
     db : {
-        url : "mongodb://localhost/server_test"
+        url : process.env.TEST_MONGODB_URI || "mongodb://127.0.0.1:27017/server_test"
     },
     lobby : {
         UPDATE_INTERVAL : 1000,

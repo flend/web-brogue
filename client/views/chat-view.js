@@ -39,7 +39,7 @@ define([
             $(this.inputElement).val(currentInput);
             $(this.listElement).scrollTop(1E10);
             if(inputHadFocus) {
-                $(this.inputElement).focus();
+                $(this.inputElement).trigger('focus');
             }
         },
 
@@ -85,7 +85,7 @@ define([
 
            this.render();
            $(this.inputElement).val('');
-           $(this.inputElement).focus();
+           $(this.inputElement).trigger('focus');
         },
         login : function(username) {
             this.model.setUsername(username);

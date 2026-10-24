@@ -1,6 +1,4 @@
-const usersApi = require("./api/users-api");
-
-module.exports = function(config) {
+module.exports = async function(config) {
     var express = require("express");
     var morgan = require("morgan");
 
@@ -13,9 +11,19 @@ module.exports = function(config) {
     var usersApi = require("./api/users-api");
 
     var mongoose = require("mongoose");
-    mongoose.connect(config.db.url);
+    await mongoose.connect(config.db.url, { serverSelectionTimeoutMS: 10000 });
 
     var app = express();
+
+    app.use(function(req, res, next) {
+        const page = parseInt(req.query.page, 10);
+        const limit = parseInt(req.query.limit, 10);
+        req.pagination = {
+            page: Math.max(1, page || 1),
+            limit: Number.isNaN(limit) ? 10 : Math.min(50, Math.max(0, limit))
+        };
+        next();
+    });
 
     app.use(express.static(config.path.CLIENT_DIR));
 
@@ -48,8 +56,6 @@ module.exports = function(config) {
     var server = require('http').Server(app);
     var io = require('socket.io')(server);
 
-    server.listen(config.port.HTTP);
-
     io.on('connection', function (socket) {
 
         //console.log("New connection");
@@ -78,9 +84,19 @@ module.exports = function(config) {
         });
 
         socket.on("error", function (err) {
-            util.log('Error emitted internally from web socket instance: ' + err);
+            console.log('Error emitted internally from web socket instance: ' + err);
         });
     });
 
+    await new Promise(function(resolve, reject) {
+        server.once('error', reject);
+        server.listen(config.port.HTTP, resolve);
+    });
+    app.httpServer = server;
+    app.close = async function() {
+        await new Promise(resolve => io.close(resolve));
+        accessLogStream.end();
+        await mongoose.disconnect();
+    };
     return app;
 };

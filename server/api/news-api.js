@@ -1,12 +1,11 @@
 var NewsRecord = require("../database/news-model");
-var paginate = require("express-paginate");
 var sanitize = require('mongo-sanitize');
 var _ = require("underscore");
 
 module.exports = function(app) {
 
     var sortFromQueryParams = function(req, defaultSort) {
-        
+
         if (req.query.sort) {
             if (req.query.order && req.query.order === "desc") {
                 return { [sanitize(req.query.sort)] : -1 }
@@ -44,8 +43,8 @@ module.exports = function(app) {
 
     app.get("/api/news", function (req, res, next) {
         NewsRecord.paginate({}, {
-            page: sanitize(req.query.page),
-            limit: sanitize(req.query.limit),
+            page: req.pagination.page,
+            limit: req.pagination.limit,
             sort: sortFromQueryParams(req, { date: -1 })
         }, function (err, newsRecords) {
 

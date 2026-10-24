@@ -53,7 +53,7 @@ define([
             $(this.inputElement).val(currentInput);
             $(this.listElement).scrollTop(1E10);
             if(inputHadFocus) {
-                $(this.inputElement).focus();
+                $(this.inputElement).trigger('focus');
             }
         },
 
@@ -88,7 +88,7 @@ define([
 
             this.render();
             $(this.inputElement).val('');
-            $(this.inputElement).focus();
+            $(this.inputElement).trigger('focus');
         },
         chatHide: function() {
             this.model.setChatShown(false);
