@@ -1,9 +1,9 @@
 // Define the web socket object for our application
 // All socket messages are immediately passed into the router.
 
-define(['dataIO/router', 'dispatcher', 'io', 'config'], function(router, dispatcher, io, config){
+define(['dataIO/router', 'dispatcher', 'io'], function(router, dispatcher, io){
 
-    var socket = io.connect(window.location.hostname + ":" + config.websocketPort);
+    var socket = io.connect();
     var performanceTracking = [];
     var debugPoint = 0;
 

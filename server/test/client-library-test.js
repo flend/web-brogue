@@ -13,13 +13,6 @@ describe('upgraded browser libraries', function() {
             interceptors: [requestInterceptor(request => {
                 // Keep tests independent of external fonts and other sites.
                 if (new URL(request.url).host !== new URL(origin).host) return new Response('');
-                if (request.url === origin + '/config.js') {
-                    const source = require('node:fs').readFileSync(
-                        require('node:path').join(__dirname, '../../client/config.js'), 'utf8');
-                    return new Response(source.replace('websocketPort: 8080', 'websocketPort: ' + port), {
-                        headers: { 'Content-Type': 'application/javascript' }
-                    });
-                }
             })]
         };
         const console = new VirtualConsole();
