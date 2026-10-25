@@ -81,10 +81,23 @@ In particular, make sure to get the client and server to agree on the websocketP
 
 Restarting the server
 --------------------------------
-When you restart (kill and run again) the server to start running a new version, games in progress are not affected.
-However, the server will forget about its registry of games that it uses to kill inactive games from over 2 weeks ago.
-Therefore you probably want to kill old games.
-A good command is `killall --older-than 1M -r ".*brogue.*"` which kills all brogue process started more than 1 month ago.
+Live games remain running when their browser disconnects. `config.gameLifecycle`
+retains them for 14 days after the last valid player input, checking hourly.
+Spectator refreshes and native output do not extend that deadline. Reaping sends
+SIGTERM, escalates to SIGKILL after 5 seconds, and retains ownership until the OS
+reports an exit. Final score datagrams get a short drain window on process exit.
+
+Fatal socket errors also terminate an owned child instead of discarding its
+handle and leaving it running. Startup failures and unexpected child exits close
+their sockets, timers, and registry entries. Reaper and escalation messages in
+the server log include the PID for operational diagnosis.
+
+A Node restart is different: detached native games can survive, but JavaScript
+child handles do not. An interface attached to a process created by an earlier
+Node run cannot prove ownership or terminate it through a ChildProcess handle.
+External cleanup of those older processes is still required. Do not use a broad
+process-name kill command on a live host without first checking ownership and
+which games should be retained.
 
 Tests
 ----------------------------

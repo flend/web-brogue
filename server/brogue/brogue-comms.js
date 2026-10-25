@@ -14,6 +14,7 @@ module.exports = {
         var gameKey = JSON.stringify([variant, username, mode === brogueMode.RECORDING]);
 
         if (this.brogueInterface[gameKey]) {
+            if (this.brogueInterface[gameKey].isTerminating()) throw new Error('The previous game is still closing. Please try again shortly.');
             if(!this.brogueInterface[gameKey].disconnected) {
                 return this.brogueInterface[gameKey];
             }
@@ -21,8 +22,9 @@ module.exports = {
 
         //If no interface exists, or it is disconnected, start with a new interface
 
+        let instance;
         try {
-            const instance = new brogue(username, variant);
+            instance = new brogue(username, variant);
             this.brogueInterface[gameKey] = instance;
             instance.onDisconnect = () => {
                 if (this.brogueInterface[gameKey] === instance) delete this.brogueInterface[gameKey];
@@ -30,7 +32,10 @@ module.exports = {
             instance.start(data, mode);
         }
         catch(e) {
-            delete this.brogueInterface[gameKey];
+            // Failed observation/startup can already have allocated sockets or
+            // a child. Release I/O, but retain a live child's termination owner.
+            if (instance) instance.resetBrogueConnection(instance);
+            if (!instance || !instance.hasLiveChild()) delete this.brogueInterface[gameKey];
             throw e;
         }
 

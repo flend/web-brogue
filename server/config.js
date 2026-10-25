@@ -214,6 +214,12 @@ var config = {
         }
     },
     defaultBrogueVariant: "BROGUECEV18",
+    gameLifecycle: {
+        idleTimeoutMs: 14 * 24 * 60 * 60 * 1000,
+        reaperIntervalMs: 60 * 60 * 1000,
+        killGraceMs: 5000,
+        exitDrainMs: 250
+    },
     path : {
         CLIENT_DIR : path.normalize(__dirname + "/../client/"),
         GAME_DATA_DIR : path.normalize(__dirname + "/../game-data/")

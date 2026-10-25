@@ -31,10 +31,14 @@ var QUERY_GRAPHICS_INPUT_SIZE = 5;
 var SCREEN_REFRESH = 50;
 var QUERY_GRAPHICS = 51;
 
-var IDLE_KILLER_INTERVAL = 1 * 24 * 60 * 60 * 1000;
-var IDLE_KILLER_TIMEOUT = 14 * 24 * 60 * 60 * 1000;
+var DEFAULT_LIFECYCLE = {
+    reaperIntervalMs: 60 * 60 * 1000,
+    idleTimeoutMs: 14 * 24 * 60 * 60 * 1000,
+    killGraceMs: 5000,
+    exitDrainMs: 250
+};
 
-function BrogueInterface(username, variant) {
+function BrogueInterface(username, variant, options = {}) {
     this.username = username;
     this.variant = variant;
     this.childDir = null;
@@ -42,7 +46,19 @@ function BrogueInterface(username, variant) {
     this.brogueEvents = new events.EventEmitter();
 
     this.disconnected = false;
-    this.lastActiveTime = Date.now();
+    this.now = options.now || Date.now;
+    this.spawn = options.spawn || childProcess.spawn;
+    this.lifecycle = Object.assign({}, DEFAULT_LIFECYCLE, config.gameLifecycle, options.lifecycle);
+    this.lastActiveTime = this.now();
+    this.lastOutputTime = this.lastActiveTime;
+    this.brogueChild = null;
+    this.intervalKiller = null;
+    this.killTimer = null;
+    this.exitTimer = null;
+    this.childExited = false;
+    this.terminating = false;
+    this.quitNotified = false;
+    this.disconnectNotified = false;
 }
 
 BrogueInterface.prototype.addDataListener = function(listener) {
@@ -156,6 +172,9 @@ BrogueInterface.prototype.handleIncomingBinaryMessage = function(message, callba
         return;
     }
 
+    // Only player input renews the retention deadline. Screen refreshes,
+    // spectators and native output are not evidence that a player is active.
+    if (controlValue <= 5) this.lastActiveTime = this.now();
     this.sendToBrogue(message, callback);
 };
 
@@ -260,7 +279,20 @@ BrogueInterface.prototype.spawnChildProcess = function (args, childWorkingDir) {
     if(!brogueClientPath) {
         throw new Error("Unable to find path for variant: " + this.variant)
     }
-    this.brogueChild = childProcess.spawn(brogueClientPath, args, options);
+    const child = this.spawn(brogueClientPath, args, options);
+    this.brogueChild = child;
+    this.childExited = false;
+    // Install ownership tracking immediately, even if socket setup fails.
+    child.once('exit', () => this.childDidExit(child));
+    child.once('error', () => {
+        if (this.brogueChild !== child) return;
+        if (!child.pid) {
+            this.childExited = true;
+            this.brogueChild = null;
+        }
+        this.killBrogue(this);
+        this.notifyQuit('Unable to start or communicate with the game process.');
+    });
 };
 
 BrogueInterface.prototype.attachChildProcess = function() {
@@ -270,19 +302,20 @@ BrogueInterface.prototype.attachChildProcess = function() {
 
 BrogueInterface.prototype.attachChildIdleKiller = function() {
     clearInterval(this.intervalKiller);
-    this.intervalKiller = setInterval(this.checkIdleTimeAndKill.bind(this), IDLE_KILLER_INTERVAL);
+    this.intervalKiller = setInterval(this.checkIdleTimeAndKill.bind(this), this.lifecycle.reaperIntervalMs);
+    this.intervalKiller.unref();
 };
 
 BrogueInterface.prototype.checkIdleTimeAndKill = function() {
-    var idleTime = new Date().getTime() - this.lastActiveTime;
+    var idleTime = this.now() - this.lastActiveTime;
 
-    if(idleTime > IDLE_KILLER_TIMEOUT) {
+    if(idleTime >= this.lifecycle.idleTimeoutMs) {
         clearTimeout(this.intervalKiller);
-
+        console.log('Reaping idle game:', this.variant, 'pid:', this.brogueChild?.pid || 'unmanaged', 'idleMs:', idleTime);
         this.killBrogue(this);
 
         //Do not send the 'error' event, since it's likely that no controller is listening any more, and the 'error' event will crash the server
-        this.brogueEvents.emit('quit', 'Brogue process timed out due to inactivity');
+        this.notifyQuit('Brogue process timed out due to inactivity');
     }
 };
 
@@ -297,7 +330,7 @@ BrogueInterface.prototype.attachChildEvents = function () {
 
         //Callback when receiving data on the socket from brogue
 
-        self.lastActiveTime = new Date().getTime();
+        self.lastOutputTime = self.now();
 
         var remainderLength = self.dataRemainder.length;
 
@@ -582,7 +615,7 @@ BrogueInterface.prototype.attachChildEvents = function () {
     this.brogueClientSocket.on('error', function(err) {
         self.resetBrogueConnection(self);
         //Not identified any cases where this can happen yet but assume it's terminal
-        self.brogueEvents.emit('quit', 'Error when reading from client socket');
+        self.notifyQuit('Error when reading from client socket');
     });
 
     this.brogueClientSocket.bind(this.getChildWorkingDir() + "/" + CLIENT_SOCKET);
@@ -599,10 +632,10 @@ BrogueInterface.prototype.attachChildEvents = function () {
         //This occurs when we connected to an orphaned brogue process and it exits
         //Therefore we set ourselves into an ended state so a new game can be started
         
-        if(err.code != -11) {
+        if(err.code !== -11 && err.code !== 'EAGAIN') {
             self.resetBrogueConnection(self);
             console.error('Error when writing to client socket: ' + err);
-            self.brogueEvents.emit('quit', 'Error when writing to client socket - normally brogue has exited');
+            self.notifyQuit('Error when writing to client socket - normally brogue has exited');
         }
         else {
             //err.code = -11 EAGAIN
@@ -613,70 +646,99 @@ BrogueInterface.prototype.attachChildEvents = function () {
         }
     });
 
-    //Not applicable when connecting to an orphaned process
-    if(self.brogueChild) {
+};
 
-        self.brogueChild.on('exit', function () {
-            // we no longer respond to this event. It sometimes triggers (and causes listeners to be removed)
-            // before all events are processed from brogue so reacting here can miss events
-        });
+BrogueInterface.prototype.hasLiveChild = function() {
+    const child = this.brogueChild;
+    return Boolean(child && child.pid && !this.childExited && child.exitCode === null && child.signalCode === null);
+};
 
-        self.brogueChild.on('error', function (err) {
-            self.killBrogue(self);
+BrogueInterface.prototype.isTerminating = function() {
+    return this.terminating && this.hasLiveChild();
+};
 
-            self.brogueEvents.emit('quit', 'Message could not be sent to brogue process - Error: ' + err);
-        });
-    }
+BrogueInterface.prototype.notifyQuit = function(reason) {
+    if (this.quitNotified) return;
+    this.quitNotified = true;
+    this.brogueEvents.emit('quit', reason);
+};
+
+BrogueInterface.prototype.notifyDisconnected = function() {
+    // Do not evict the only owner of a live child while termination is pending.
+    if (this.disconnectNotified || this.hasLiveChild()) return;
+    this.disconnectNotified = true;
+    if (this.onDisconnect) this.onDisconnect();
+};
+
+BrogueInterface.prototype.terminateChild = function() {
+    if (!this.hasLiveChild() || this.terminating) return;
+    this.terminating = true;
+    const child = this.brogueChild;
+    const forceKill = () => {
+        if (this.brogueChild !== child || !this.hasLiveChild()) return;
+        if (!this.killEscalated) {
+            this.killEscalated = true;
+            console.warn('Game process did not exit after SIGTERM; sending SIGKILL:', child.pid);
+        }
+        try { child.kill('SIGKILL'); } catch (error) { console.error('Unable to kill game process:', error.code); }
+        // Retain ownership until exit is actually observed, including children
+        // stuck in kernel I/O. ChildProcess owns the PID; never signal a guessed PID.
+        this.killTimer = setTimeout(forceKill, this.lifecycle.killGraceMs);
+        this.killTimer.unref();
+    };
+    this.killTimer = setTimeout(forceKill, this.lifecycle.killGraceMs);
+    this.killTimer.unref();
+    try { child.kill('SIGTERM'); } catch (error) { console.error('Unable to terminate game process:', error.code); }
+};
+
+BrogueInterface.prototype.childDidExit = function(child) {
+    if (this.brogueChild !== child) return;
+    this.childExited = true;
+    clearTimeout(this.killTimer);
+    this.killTimer = null;
+    clearInterval(this.intervalKiller);
+    this.intervalKiller = null;
+    // An exit notification can precede delivery of the final score datagram.
+    // Drain that short window before closing sockets/removing event listeners.
+    clearTimeout(this.exitTimer);
+    this.exitTimer = setTimeout(() => {
+        this.exitTimer = null;
+        if (this.brogueChild !== child) return;
+        this.brogueChild = null;
+        this.resetBrogueConnection(this);
+        this.notifyQuit('Game process exited.');
+    }, this.lifecycle.exitDrainMs);
 };
 
 BrogueInterface.prototype.killBrogue = function(self) {
-    if(self.brogueChild) {
-        self.brogueChild.kill();
-    }
-
     self.resetBrogueConnection(self);
 };
 
 BrogueInterface.prototype.resetBrogueConnection = function(self) {
     clearInterval(self.intervalKiller);
     self.intervalKiller = null;
-
-    if(self.brogueSocket != null) {
-        try {
-            self.brogueSocket.close();
-        }
-        catch (err) {
-            console.error("Failed to close server socket " + JSON.stringify(err));
-        }
-    }
-    if(self.brogueClientSocket != null) {
-        try {
-            self.brogueClientSocket.close();
-        }
-        catch(err) {
-            console.error("Failed to close client socket " + JSON.stringify(err));
+    // Socket failure is terminal for this interface, but not proof that the
+    // native process is dead. Keep its handle and SIGKILL fallback until exit.
+    self.terminateChild();
+    for (const field of ['brogueSocket', 'brogueClientSocket']) {
+        const socket = self[field];
+        self[field] = null;
+        if (socket) {
+            try { socket.close(); } catch (error) { console.error('Failed to close game socket:', error.code); }
         }
     }
-
-    self.brogueChild = null;
-    self.brogueSocket = null;
-    self.brogueClientSocket = null;
     self.disconnected = true;
-    if (self.onDisconnect) self.onDisconnect();
+    self.notifyDisconnected();
 };
 
 BrogueInterface.prototype.processBrogueEvents = function(self, eventData) {
-    //Analyse brogue messages and do suitable processing, before passing back to the controller
-
-    //Kill the brogue process on quit (save a keypress and make sure it dies)
     if(eventData.eventId === brogueConstants.notifyEvents.GAMEOVER_QUIT ||
         eventData.eventId === brogueConstants.notifyEvents.GAMEOVER_DEATH ||
         eventData.eventId === brogueConstants.notifyEvents.GAMEOVER_VICTORY ||
         eventData.eventId === brogueConstants.notifyEvents.GAMEOVER_SUPERVICTORY ||
         eventData.eventId === brogueConstants.notifyEvents.GAMEOVER_RECORDING) {
-
         self.killBrogue(self);
-        self.brogueEvents.emit('quit');
+        self.notifyQuit();
     }
 };
 
