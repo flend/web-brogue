@@ -6,6 +6,50 @@ var expect = require("chai").expect;
 var server = require("./server-test");
 var config = require("./config-test");
 
+describe('general statistics include masteries in victory totals', function() {
+    beforeEach(async function() {
+        const events = brogueConstants.notifyEvents;
+        const outcomes = [events.GAMEOVER_VICTORY, events.GAMEOVER_SUPERVICTORY,
+            events.GAMEOVER_SUPERVICTORY, events.GAMEOVER_DEATH, events.GAMEOVER_QUIT];
+        const games = [];
+        for (const easyMode of [false, true]) {
+            for (const result of outcomes) {
+                games.push({ username: 'victory-count-test',
+                    date: new Date(1700000000000 + games.length),
+                    variant: 'BROGUE', result, easyMode });
+            }
+        }
+        await gameRecord.create(games);
+    });
+    afterEach(async function() { await gameRecord.deleteMany({}); });
+
+    it('includes each mastery once and keeps easy and normal modes separate', async function() {
+        const response = await request(server.app).get('/api/stats/general')
+            .query({ variant: 'BROGUE', username: 'victory-count-test' })
+            .set('Accept', 'application/json').expect(200);
+        for (const mode of ['Normal', 'Easy']) {
+            expect(response.body['total' + mode + 'ModeVictories']).to.equal(3);
+            expect(response.body['total' + mode + 'ModeSuperVictories']).to.equal(2);
+            expect(response.body['total' + mode + 'ModeDeaths']).to.equal(1);
+            expect(response.body['total' + mode + 'ModeQuits']).to.equal(1);
+        }
+        expect(response.body.totalGames).to.equal(10);
+    });
+
+    it('counts a mastery-only history as one victory and one mastery', async function() {
+        await gameRecord.deleteMany({ result: { $ne: brogueConstants.notifyEvents.GAMEOVER_SUPERVICTORY } });
+        // Retain one normal-mode mastery to exercise the original 0-victory case.
+        const mastery = await gameRecord.findOne({ easyMode: false });
+        await gameRecord.deleteMany({ _id: { $ne: mastery._id } });
+        const response = await request(server.app).get('/api/stats/general')
+            .set('Accept', 'application/json').expect(200);
+        expect(response.body.totalNormalModeVictories).to.equal(1);
+        expect(response.body.totalNormalModeSuperVictories).to.equal(1);
+        expect(response.body.totalEasyModeVictories).to.equal(0);
+        expect(response.body.totalEasyModeSuperVictories).to.equal(0);
+    });
+});
+
 describe('death statistics count each normal-mode death once', function() {
     beforeEach(async function() {
         const descriptions = [

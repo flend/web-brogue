@@ -114,11 +114,12 @@ module.exports = {
             statsSummary.totalGames = games.length;
             statsSummary.totalEasyModeGames = allEasyModeGames.length;
             statsSummary.totalNormalModeGames = allNormalModeGames.length;
-            statsSummary.totalEasyModeVictories = allEasyModeVictories.length;
+            // Masteries are victories too; mastery totals remain a subset.
+            statsSummary.totalEasyModeVictories = allEasyModeVictories.length + allEasyModeSuperVictories.length;
             statsSummary.totalEasyModeQuits = allEasyModeQuits.length;
             statsSummary.totalEasyModeDeaths = allEasyModeDeaths.length;
             statsSummary.totalEasyModeSuperVictories = allEasyModeSuperVictories.length;
-            statsSummary.totalNormalModeVictories = allNormalModeVictories.length;
+            statsSummary.totalNormalModeVictories = allNormalModeVictories.length + allNormalModeSuperVictories.length;
             statsSummary.totalNormalModeQuits = allNormalModeQuits.length;
             statsSummary.totalNormalModeDeaths = allNormalModeDeaths.length;
             statsSummary.totalNormalModeSuperVictories = allNormalModeSuperVictories.length;
