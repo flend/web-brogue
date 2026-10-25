@@ -49,6 +49,10 @@ function BrogueInterface(username, variant, options = {}) {
     this.now = options.now || Date.now;
     this.spawn = options.spawn || childProcess.spawn;
     this.lifecycle = Object.assign({}, DEFAULT_LIFECYCLE, config.gameLifecycle, options.lifecycle);
+    const quota = this.lifecycle.cpuQuotaPercent;
+    if (quota !== null && quota !== undefined && (!Number.isInteger(quota) || quota < 1 || quota > 100)) {
+        throw new Error('Game CPU quota must be an integer from 1 to 100');
+    }
     this.lastActiveTime = this.now();
     this.lastOutputTime = this.lastActiveTime;
     this.brogueChild = null;
@@ -279,7 +283,15 @@ BrogueInterface.prototype.spawnChildProcess = function (args, childWorkingDir) {
     if(!brogueClientPath) {
         throw new Error("Unable to find path for variant: " + this.variant)
     }
-    const child = this.spawn(brogueClientPath, args, options);
+    let command = brogueClientPath;
+    if (this.lifecycle.cpuQuotaPercent != null) {
+        command = '/bin/sh';
+        args = [path.join(__dirname, '../scripts/limit-game-cpu.sh'), brogueClientPath, ...args];
+        options.env = Object.assign({}, process.env, {
+            BROGUE_CPU_QUOTA_PERCENT: String(this.lifecycle.cpuQuotaPercent)
+        });
+    }
+    const child = this.spawn(command, args, options);
     this.brogueChild = child;
     this.childExited = false;
     // Install ownership tracking immediately, even if socket setup fails.

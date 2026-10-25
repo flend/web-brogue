@@ -215,6 +215,7 @@ var config = {
     },
     defaultBrogueVariant: "BROGUECEV18",
     gameLifecycle: {
+        cpuQuotaPercent: process.env.BROGUE_CPU_QUOTA_PERCENT === undefined ? null : Number(process.env.BROGUE_CPU_QUOTA_PERCENT),
         idleTimeoutMs: 14 * 24 * 60 * 60 * 1000,
         reaperIntervalMs: 60 * 60 * 1000,
         killGraceMs: 5000,

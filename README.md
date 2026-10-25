@@ -99,6 +99,28 @@ External cleanup of those older processes is still required. Do not use a broad
 process-name kill command on a live host without first checking ownership and
 which games should be retained.
 
+Per-game CPU limit
+----------------------------
+On Ubuntu 24.04, set `BROGUE_CPU_QUOTA_PERCENT=20` in the environment used to
+start Node (including Forever) to cap each newly launched game or replay at 20%
+of one CPU core. Without this variable games launch directly. Invalid values
+are rejected. Existing games must exit before the cap can apply to them.
+
+One shared shell launcher, `server/scripts/limit-game-cpu.sh`, runs each binary
+in its own systemd user scope. Both launch stages use `exec`, preserving the
+PID tracked by the reaper. No native source changes or renamed binaries are
+needed. A scope setup failure exits the launcher; it never falls back to an
+uncapped game.
+
+The app user needs a running systemd user manager and a delegated CPU
+controller. Enable lingering with `sudo loginctl enable-linger APP_USER` on
+the new droplet. Ensure the startup environment has
+`XDG_RUNTIME_DIR=/run/user/UID` and
+`DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/UID/bus`, using the app user's UID.
+Verify the wrapper as that user before enabling it in production; a process's
+cgroup `cpu.max` should read `20000 100000` for a 20% cap. The web server and
+MongoDB are outside these per-game scopes.
+
 Tests
 ----------------------------
 Run `npm test` in `server`. By default it starts a temporary MongoDB 8.0.34
