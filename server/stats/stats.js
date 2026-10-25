@@ -1,70 +1,32 @@
-var _ = require("underscore");
+var brogueConstants = require("../brogue/brogue-constants");
 
 module.exports = {
 
     deathGamesWithCauses: function (games) {
 
-        var monsterDeathGames = _.filter(games, function (game) {
-            return game.description && game.description.search("Killed") != -1;
-        });
+        return games.filter(function(game) {
+            return game.result === brogueConstants.notifyEvents.GAMEOVER_DEATH;
+        }).map(function(game) {
+            var description = typeof game.description === 'string' ? game.description : '';
+            var cause = 'unknown';
 
-        var monsterDeathGamesWithCause = _.map(monsterDeathGames, function (game) {
-
-            var monsterRe = new RegExp("by\\s+[an]*\\s+(.*?)\\s+on");
-            var descriptionMatch = monsterRe.exec(game.description);
-            if (descriptionMatch) {
-                game["cause"] = descriptionMatch[1];
+            // Environmental causes take precedence over the generic "by ... on"
+            // parser. Each death contributes once, even when descriptions overlap.
+            if (/by lava\b/i.test(description)) {
+                cause = 'lava';
+            } else if (/Burned/i.test(description)) {
+                cause = 'burned to death';
+            } else if (/poison/i.test(description)) {
+                cause = 'poison';
+            } else if (/Starved/i.test(description)) {
+                cause = 'starved';
+            } else {
+                var match = /\bby\s+(?:an?\s+)?(.+?)\s+on\b/i.exec(description);
+                if (match) cause = match[1];
             }
-            else {
-                game["cause"] = "unknown";
-            }
 
-            return game;
+            return Object.assign({}, game, { cause: cause });
         });
-
-        var burnedDeathGames = _.filter(games, function (game) {
-            return game.description && game.description.search("Burned") != -1;
-        });
-
-        var burnedDeathGamesWithCause = _.map(burnedDeathGames, function(game) {
-            game["cause"] = "burned to death";
-            return game;
-        });
-
-        var poisonedDeathGames = _.filter(games, function (game) {
-            return game.description && game.description.search("poison") != -1;
-        });
-
-        var poisonedDeathGamesWithCause = _.map(poisonedDeathGames, function(game) {
-            game["cause"] = "poison";
-            return game;
-        });
-
-        var starvedDeathGames = _.filter(games, function (game) {
-            return game.description && game.description.search("Starved") != -1;
-        });
-
-        var starvedDeathGamesWithCause = _.map(starvedDeathGames, function(game) {
-            game["cause"] = "starved";
-            return game;
-        });
-
-        var lavaDeathGames = _.filter(games, function (game) {
-            return game.description && game.description.search("by lava") != -1;
-        });
-
-        var lavaDeathGamesWithCause = _.map(lavaDeathGames, function(game) {
-            game["cause"] = "lava";
-            return game;
-        });
-
-        var allDeathGamesWithCause = monsterDeathGamesWithCause
-            .concat(burnedDeathGamesWithCause)
-            .concat(poisonedDeathGamesWithCause)
-            .concat(starvedDeathGamesWithCause)
-            .concat(lavaDeathGamesWithCause);
-
-        return allDeathGamesWithCause;
     },
 
     doesVariantSupportRecordingDownloads: function (config, variant) {

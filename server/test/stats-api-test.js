@@ -6,6 +6,43 @@ var expect = require("chai").expect;
 var server = require("./server-test");
 var config = require("./config-test");
 
+describe('death statistics count each normal-mode death once', function() {
+    beforeEach(async function() {
+        const descriptions = [
+            'Killed by lava on depth 3.',
+            'Drained by a cursed ring on depth 3.',
+            'An unexpected demise.',
+            'Killed by lava on depth 3.',
+            'Killed by lava on depth 3.'
+        ];
+        await gameRecord.create(descriptions.map((description, index) => ({
+            username: 'death-count-test', date: new Date(1700000000000 + index),
+            variant: 'BROGUE', level: 3, description,
+            result: index === 4 ? brogueConstants.notifyEvents.GAMEOVER_QUIT : brogueConstants.notifyEvents.GAMEOVER_DEATH,
+            easyMode: index === 3
+        })));
+    });
+    afterEach(async function() { await gameRecord.deleteMany({}); });
+
+    it('counts lava, previously omitted deaths and unknown deaths in level totals', async function() {
+        const response = await request(server.app).get('/api/stats/levels').set('Accept', 'application/json').expect(200);
+        expect(response.body).to.deep.equal([{ level: 3, frequency: 3 }]);
+    });
+
+    it('uses all deaths as the cause percentage denominator, including before cropping', async function() {
+        const response = await request(server.app).get('/api/stats/levels/monsters').set('Accept', 'application/json').expect(200);
+        expect(response.body).to.have.length(3);
+        expect(response.body.map(row => row.cause)).to.have.members(['lava', 'cursed ring', 'unknown']);
+        for (const row of response.body) {
+            expect(row.frequency).to.equal(1);
+            expect(row.percentage).to.be.closeTo(100 / 3, 1e-9);
+        }
+        const cropped = await request(server.app).get('/api/stats/levels/monsters?maxCauses=1').set('Accept', 'application/json').expect(200);
+        expect(cropped.body).to.have.length(1);
+        expect(cropped.body[0].percentage).to.be.closeTo(100 / 3, 1e-9);
+    });
+});
+
 
 
 describe("stats/general", function(){
