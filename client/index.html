@@ -252,8 +252,9 @@
     <td><% if (easyMode) { %>&<% } %><%- deepestLevel %></td>
     <td><%- prettyScore %></td>
     <td><%- formattedIdle %></td>
-    <td><a id="observe-game" data-username="<%- userName %>" href="#brogue"><%- action %></a></td>
-    <td><a id="link-game" href="#brogue"><%- linkAction %></a></td>
+    <% /* Action markup is generated locally in current-games-view, never supplied by players. */ %>
+    <td><a id="observe-game" data-username="<%- userName %>" href="#brogue"><%= action %></a></td>
+    <td><a id="link-game" href="#brogue"><%= linkAction %></a></td>
 </script>
 
 

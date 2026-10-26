@@ -157,6 +157,49 @@ describe('security regressions', function() {
         } finally { await pool.close(); }
     });
 
+    it('renders locally generated lobby action icons while escaping player data', function() {
+        const html = fs.readFileSync(path.join(__dirname, '../../client/index.html'), 'utf8');
+        const template = _.template(html.match(/<script id="current-games-row"[^>]*>([\s\S]*?)<\/script>/)[1]);
+        let View;
+        const Backbone = { View: { extend(properties) {
+            function View() {}
+            View.prototype = properties;
+            return View;
+        } } };
+        function User() { this.get = () => 'owner'; }
+        function State() {}
+        function RowModel(data) { this.data = data; }
+        function RowView(options) {
+            this.render = () => ({ el: template(Object.assign({ prettySeeded: 'Random', prettyVariant: 'Brogue',
+                easyMode: false, deepestLevel: 1, prettyScore: 0, formattedIdle: '1s' }, options.model.data)) });
+            this.remove = () => {};
+        }
+        vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../client/views/current-games-view.js'), 'utf8'), {
+            define(dependencies, factory) {
+                View = factory(() => ({ html: () => '' }), _, Backbone, () => {}, {}, RowView, State, RowModel, User);
+            }
+        });
+        for (const [userName, label] of [['owner', 'Resume'], ['<img src=x onerror="pwned=1">', 'Watch']]) {
+            let rendered;
+            const view = Object.assign({}, View.prototype, {
+                tableState: { set() {} }, renderHeadingOnEmptyChange() {},
+                $tableElement: { append(row) { rendered = row; } }
+            });
+            // Incoming action HTML must be replaced by the client's fixed icons.
+            view.updateRowModelData([{ gameName: 'test', userName, action: '<img src=x>', linkAction: '<img src=x>' }]);
+            const dom = new JSDOM('<table><tbody><tr>' + rendered + '</tr></tbody></table>');
+            try {
+                const document = dom.window.document;
+                expect(document.querySelector('#observe-game svg')).not.to.equal(null);
+                expect(document.querySelector('#observe-game').textContent).to.equal(label);
+                expect(document.querySelector('#link-game svg')).not.to.equal(null);
+                expect(document.querySelector('#link-game').textContent).to.equal('Link');
+                expect(document.querySelector('img')).to.equal(null);
+                expect(document.querySelector('#observe-game').getAttribute('data-username')).to.equal(userName);
+            } finally { dom.window.close(); }
+        }
+    });
+
     it('escapes malicious names in lobby attributes and chat HTML', function() {
         const html = fs.readFileSync(path.join(__dirname, '../../client/index.html'), 'utf8');
         const template = html.match(/<script id="current-games-row"[^>]*>([\s\S]*?)<\/script>/)[1];
