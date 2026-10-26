@@ -10,11 +10,13 @@ const { MongoClient, BSON } = require('mongoose').mongo;
 
 const COLLECTIONS = ['counters', 'users', 'newsrecords', 'chatrecords', 'gamerecords'];
 const HELP = `Usage: MIGRATION_MONGODB_URI=mongodb://localhost:27017/brogue_new
-  npm run migrate:json -- /path/to/json-export [--check-only] [--report /path/to/report.json]
+  npm run migrate:json -- /path/to/json-export [--json-format legacy|v2] [--check-only] [--report /path/to/report.json]
 
 Requires Node 24, server dependencies, MongoDB 8+, and current MongoDB Database Tools.
-The export directory must contain one newline-delimited legacy Extended JSON file
+The export directory must contain one newline-delimited Extended JSON file
 per collection: ${COLLECTIONS.map(name => name + '.json').join(', ')}.
+The default format is legacy (MongoDB 3.6 exports). Use --json-format v2 for
+modern mongoexport output, including canonical and relaxed Extended JSON.
 Set MONGOIMPORT to the tool's full path if mongoimport is not on PATH.
 The target URI must include a database name. The database must have no collections.
 Stop app writes for the final migration. This script never drops or overwrites data.
@@ -129,7 +131,8 @@ async function fileDigest(file) {
     return hash.digest('hex');
 }
 
-async function migrate({ directory, uri, checkOnly = false, reportFile, mongoimport = process.env.MONGOIMPORT || 'mongoimport', signal, log = console.log }) {
+async function migrate({ directory, uri, jsonFormat = 'legacy', checkOnly = false, reportFile, mongoimport = process.env.MONGOIMPORT || 'mongoimport', signal, log = console.log }) {
+    if (!['legacy', 'v2'].includes(jsonFormat)) throw new Error('JSON format must be legacy or v2.');
     const databaseName = targetName(uri);
     if (reportFile) {
         await fsp.access(path.dirname(path.resolve(reportFile)), fs.constants.W_OK);
@@ -161,9 +164,10 @@ async function migrate({ directory, uri, checkOnly = false, reportFile, mongoimp
             throw new Error('Target database contains collections. Refusing to import; choose a new empty database.');
         }
         log(`Target database: ${databaseName} (MongoDB ${version})`);
+        log(`Export JSON format: ${jsonFormat}`);
         for (const source of sources) log(`${source.name}: ${source.count} source documents`);
         const report = {
-            database: databaseName, mongodbVersion: version, toolVersion,
+            database: databaseName, mongodbVersion: version, toolVersion, jsonFormat,
             checkOnly, collections: sources.map(({ name, count, sha256 }) => ({ name, count, sha256 }))
         };
         if (!checkOnly) {
@@ -183,7 +187,7 @@ async function migrate({ directory, uri, checkOnly = false, reportFile, mongoimp
                 // Keep exported empty collections, and refuse a collection that
                 // another process created after the initial empty-target check.
                 await db.createCollection(source.name);
-                await runTool(mongoimport, ['--config', configFile, '--legacy', '--stopOnError',
+                await runTool(mongoimport, ['--config', configFile, ...(jsonFormat === 'legacy' ? ['--legacy'] : []), '--stopOnError',
                     '--collection', source.name, '--file', source.file], signal);
                 log('Imported ' + source.name);
             }
@@ -235,7 +239,7 @@ async function migrate({ directory, uri, checkOnly = false, reportFile, mongoimp
 async function main() {
     const { values, positionals } = parseArgs({
         allowPositionals: true,
-        options: { 'check-only': { type: 'boolean' }, report: { type: 'string' }, help: { type: 'boolean' } }
+        options: { 'json-format': { type: 'string' }, 'check-only': { type: 'boolean' }, report: { type: 'string' }, help: { type: 'boolean' } }
     });
     if (values.help) return console.log(HELP);
     if (positionals.length !== 1) throw new Error(HELP);
@@ -245,7 +249,7 @@ async function main() {
     process.once('SIGTERM', interrupted);
     try {
         await migrate({ directory: positionals[0], uri: process.env.MIGRATION_MONGODB_URI,
-            checkOnly: values['check-only'], reportFile: values.report, signal: controller.signal });
+            jsonFormat: values['json-format'], checkOnly: values['check-only'], reportFile: values.report, signal: controller.signal });
     } finally {
         process.removeListener('SIGINT', interrupted);
         process.removeListener('SIGTERM', interrupted);

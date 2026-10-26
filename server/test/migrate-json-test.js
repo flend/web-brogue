@@ -38,6 +38,30 @@ describe('legacy JSON migration safeguards', function() {
         expect(targetName('mongodb://host1:27017,host2:27017/brogue_new?replicaSet=rs0')).to.equal('brogue_new');
     });
 
+    it('rejects unsupported JSON formats before scanning files or writing', async function() {
+        const error = await rejection(() => migrate({ jsonFormat: 'automatic' }));
+        expect(error.message).to.include('JSON format must be legacy or v2');
+    });
+
+    for (const jsonFormat of ['legacy', 'v2']) {
+        it('uses the ' + jsonFormat + ' parser mode and records it in the report', async function() {
+            const empty = client.db('migration_format_' + jsonFormat + '_' + Date.now() + '_test');
+            const uri = new URL(config.db.url);
+            uri.pathname = '/' + empty.databaseName;
+            const argsFile = path.join(directory, 'arguments');
+            await fs.writeFile(tool, '#!/bin/sh\nif [ "$1" = "--version" ]; then\n' +
+                'printf "mongoimport version: 100.19.1\\n"\nelse\n' +
+                'printf "%s\\n" "$@" >> "' + argsFile + '"\nfi\n', { mode: 0o700 });
+            try {
+                const report = await migrate({ directory, uri: uri.toString(), jsonFormat, mongoimport: tool, log() {} });
+                const args = (await fs.readFile(argsFile, 'utf8')).split('\n');
+                expect(args.filter(arg => arg === '--legacy')).to.have.length(jsonFormat === 'legacy' ? 5 : 0);
+                expect(report.jsonFormat).to.equal(jsonFormat);
+                expect(report.verified).to.equal(true);
+            } finally { await empty.dropDatabase(); }
+        });
+    }
+
     it('checks every source file before allowing database writes', async function() {
         await fs.writeFile(path.join(directory, 'gamerecords.json'), '{broken JSON}\n');
         const error = await rejection(() => migrate({ directory, uri: config.db.url, mongoimport: tool, log() {} }));

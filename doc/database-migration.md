@@ -32,6 +32,12 @@ The MongoDB server must already be running; this script does not install or star
 The input is a **directory** with these five newline-delimited legacy Extended
 JSON exports: `counters.json`, `users.json`, `newsrecords.json`, `chatrecords.json`,
 and `gamerecords.json`. Use the source's `mongoexport` without `--jsonArray`.
+For modern exports (for example MongoDB 7 with Database Tools 100.x), add
+`--json-format v2` to both preflight and import commands. This accepts canonical
+or relaxed Extended JSON v2 and omits mongoimport's `--legacy` option. The
+default remains `legacy` for the original MongoDB 3.6 export workflow. Both
+formats use the same empty-target safeguards and full document verification;
+the selected format is recorded in the report.
 If the export was transferred as an archive, extract it first:
 
 ```sh
